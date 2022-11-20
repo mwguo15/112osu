@@ -108,8 +108,8 @@ def appStarted(app):
 
     app.cx = app.width / 2
     app.cy = app.height / 2
-    app.cursorX = app.cx
-    app.cursorY = app.cy
+    app.cursorX = 0
+    app.cursorY = 0
     app.timePassed = 0
     app.timerDelay = 1
 
@@ -153,10 +153,10 @@ def drawSpinner(app, canvas, hitObject):
     return 42
 
 def drawCursor(app, canvas):
-    baseR = 30
+    baseR = 15
     cursorR = baseR * cursor_size
     x, y = app.cursorX, app.cursorY
-    canvas.create_oval(x - cursorR, y - cursorR, x + cursorR, y + cursorR, fill = "black") # image = ImageTk.PhotoImage(app.cursor)
+    canvas.create_oval(x - cursorR, y - cursorR, x + cursorR, y + cursorR, fill = "yellow") # image = ImageTk.PhotoImage(app.cursor)
     
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
@@ -167,7 +167,8 @@ def appStopped(app):
 
 def keyPressed(app, event):
     if ((event.key in ('a', 's', 'A', 'S')) and 
-    (app.cursorX, app.cursorY) >= (250, 50) and (app.cursorX, app.cursorY) <= (350, 150)):
+    ((app.cursorX, app.cursorY) >= (250, 50)) and 
+    ((app.cursorX, app.cursorY) <= (350, 150))):
         pygame.mixer.Sound.play(app.sound)
 
 def timerFired(app):
@@ -176,7 +177,7 @@ def timerFired(app):
         app.currentDraw.append(app.map1.objects[app.timePassed])
 
 def redrawAll(app, canvas):
-    canvas.create_image(app.cx - 500, app.cy - 500, image = ImageTk.PhotoImage(app.background))
+    # canvas.create_image(app.cx - 500, app.cy - 500, image = ImageTk.PhotoImage(app.background))
     canvas.create_oval(250, 50, 350, 150, fill='pink')
     drawCursor(app, canvas)
 

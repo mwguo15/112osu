@@ -1,5 +1,5 @@
 from cmu_112_graphics import *
-from main import *
+# from main import *
 
 def decimalToBinary(num):
     binStr = [0] * 8
