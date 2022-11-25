@@ -111,7 +111,7 @@ def appStarted(app):
     app.cursorX = 0
     app.cursorY = 0
     app.timePassed = 0
-    app.timerDelay = 1
+    app.timerDelay = 3000
 
     # app.hitcircle = app.loadImage("file:///media/archive/skin.zip/hitcircle.png")
     # app.approachcircle = app.loadImage("file:///media/archive/skin.zip/approachcircle.png")
@@ -177,7 +177,7 @@ def timerFired(app):
         app.currentDraw.append(app.map1.objects[app.timePassed])
 
 def redrawAll(app, canvas):
-    # canvas.create_image(app.cx - 500, app.cy - 500, image = ImageTk.PhotoImage(app.background))
+    canvas.create_image(app.cx - 500, app.cy - 500, image = ImageTk.PhotoImage(app.background))
     canvas.create_oval(250, 50, 350, 150, fill='pink')
     drawCursor(app, canvas)
 
