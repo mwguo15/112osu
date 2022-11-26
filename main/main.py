@@ -1,5 +1,6 @@
 from cmu_112_graphics import *
 from importing import *
+import math
 import pygame
 
 
@@ -7,12 +8,16 @@ import pygame
 
 # Settings
 
-res_width = 2560
-res_height = 1440
+res_width = 1920
+res_height = 1080
 effects_vol = 1
 music_vol = 1
 master_vol = 1
 cursor_size = 1
+skin = 0
+universal_offset = 10
+maps = []
+
 
 # Map and object definitions taken from 
 # https://osu.ppy.sh/wiki/en/Client/File_formats/Osu_%28file_format%29
@@ -64,8 +69,8 @@ class HitObject(Map):
         self.drawTime = (hitTime - map.approachTiming, hitTime + map.approachTiming)
         self.type = type
         self.objectParams = objectParams
-        self.bounds = (x - map.r, y - map.r, x + map.r, y + map.r)
-        self.approachBounds = (x - 1.5*map.r, y - 1.5*map.r, x + 1.5*map.r, y + 1.5*map.r)
+        # self.bounds = (x - map.r, y - map.r, x + map.r, y + map.r)
+        # self.approachBounds = (x - 1.5*map.r, y - 1.5*map.r, x + 1.5*map.r, y + 1.5*map.r)
 
 class Circle(HitObject):
     def __init__(self, x, y, hitTime, skin):
@@ -83,7 +88,8 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
         self.loops = 1
         pygame.mixer.music.load(path)
 
-    # Loops = number of times to loop the sound.
+    # Loops = number of times to loop the sound.        app.currentObjects.pop[0]
+
     # If loops = 1 or 1, play it once.
     # If loops > 1, play it loops + 1 times.
     # If loops = -1, loop forever.
@@ -96,67 +102,84 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
         pygame.mixer.music.stop()
 
 
+def imgScale(img, base):
+    width = img.size[0]
+    scale = base / width
+    return scale
+
 def appStarted(app):
     # map = Map() from importing
     pygame.mixer.pre_init(44100, -16, 1, 512) 
     # Used to remove sound delay, especially with histounds, taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
     pygame.mixer.init()
-    app.sound = pygame.mixer.Sound("audio/hitsound.wav")
-    app.music = Sound("audio/Tokyo's Starlight.mp3")
+    app.sound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
+    app.music = Sound("audio/audio.mp3")
     app.music.start(1)
 
+    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 4, 10, 10, 5)
+    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 1500, 1, None)
+    app.map1.addObject(app.circle1)
+
+    app.currentObjects = []
+    app.currentApproach = []
 
     app.cx = app.width / 2
     app.cy = app.height / 2
     app.cursorX = 0
     app.cursorY = 0
     app.timePassed = 0
-    app.timerDelay = 3000
+    app.timerDelay = 1
 
-    # app.hitcircle = app.loadImage("file:///media/archive/skin.zip/hitcircle.png")
-    # app.approachcircle = app.loadImage("file:///media/archive/skin.zip/approachcircle.png")
-    # app.cursor = app.loadImage("file:///media/archive/skin.zip/cursor.png")
-    app.background = app.loadImage("bgg.jpg")
+    # For approach circle drawing
+    appearTime = app.map1.approachTiming * 2
+    sizeChange = 2 * app.map1.r
+    sizeDecrements = (sizeChange / appearTime) * app.timerDelay
 
-    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 10, 10, 10, 5)
-    app.circle1 = HitObject(app.map1, app.cx, app.cy, 1500, 1, None)
-    app.map1.addObject(app.circle1)
+    app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
+    app.approachRaw = app.loadImage("skins/current/approachcircle.png")
+    app.cursorRaw = app.loadImage("skins/current/cursor.png")
+    app.bgRaw = app.loadImage("meikaruza.jpg")
 
-    app.currentDraw = []
+    app.circle = app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r))
+    app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
+    app.cursor = app.scaleImage(app.cursorRaw, cursor_size)
+    app.bg = app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width))
+    
 
-
-def drawHitObject(app, canvas, hitObject):
-    for hitObject in app.currentDraw:
-        if hitObject.type == 1:
-            drawCircle(app, canvas, hitObject)
-        elif hitObject.type == 2:
-            drawSlider(app, canvas, hitObject)
-        else:
-            drawSpinner(app, canvas, hitObject)
+def drawHitObject(app, canvas):
+    if len(app.currentObjects) > 0: # Prevents out of index error for when there are no objects yet
+        for hitObject in app.currentObjects:
+            if hitObject.type == 1:
+                drawCircle(app, canvas)
+            elif hitObject.type == 2:
+                drawSlider(app, canvas)
+            else:
+                drawSpinner(app, canvas)
             
 
-def drawApproach(app, canvas, hitObject):
-    appearTime = hitObject.approachTiming * 2
-    sizeChange = (1.5 * hitObject.r) - hitObject.r
-    sizeIncrements = (sizeChange / appearTime) * app.timerDelay
-    canvas.create_oval(hitObject.approachBounds[0], hitObject.approachBounds[1], hitObject.approachBounds[2], hitObject.approachBounds[3], outline = 'black')
+# def drawApproach(app, canvas, hitObject):
+#     appearTime = hitObject.approachTiming * 2
+#     sizeChange = 2 * hitObject.r
+#     sizeDecrements = (sizeChange / appearTime) * app.timerDelay
+#     canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.approach))
 
-def drawCircle(app, canvas, hitObject):
-    canvas.create_oval(hitObject.bounds[0], hitObject.bounds[1], hitObject.bounds[2], hitObject.bounds[3], outline = 'black')
-    drawApproach(app, canvas, hitObject)
+
+def drawCircle(app, canvas):
+    current = app.currentObjects[0]
+    canvas.create_image(current.x, current.y, image = ImageTk.PhotoImage(app.circle))
 
 def drawSlider(app, canvas, hitObject):
-    drawApproach(app, canvas, hitObject)
     return 42
 
 def drawSpinner(app, canvas, hitObject):
     return 42
 
 def drawCursor(app, canvas):
-    baseR = 15
-    cursorR = baseR * cursor_size
-    x, y = app.cursorX, app.cursorY
-    canvas.create_oval(x - cursorR, y - cursorR, x + cursorR, y + cursorR, fill = "yellow") # image = ImageTk.PhotoImage(app.cursor)
+    canvas.create_image(app.cursorX, app.cursorY, image = ImageTk.PhotoImage(app.cursor))
+
+def drawBackground(app, canvas):
+    canvas.create_image(app.width / 2, app.height / 2, image = ImageTk.PhotoImage(app.bg))
+
     
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
@@ -166,19 +189,26 @@ def appStopped(app):
     app.music.stop()
 
 def keyPressed(app, event):
-    if ((event.key in ('a', 's', 'A', 'S')) and 
-    ((app.cursorX, app.cursorY) >= (250, 50)) and 
-    ((app.cursorX, app.cursorY) <= (350, 150))):
+    [objcx, objcy] = [app.currentObjects[0].x, app.currentObjects[0].y]
+    dist = math.dist([objcx, objcy], [app.cursorX, app.cursorY])
+    
+    if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
         pygame.mixer.Sound.play(app.sound)
+        app.currentObjects.pop[0]
+        app.currentApproach.pop[0]
 
 def timerFired(app):
     app.timePassed += 1
-    if app.timePassed in app.map1.objects:
-        app.currentDraw.append(app.map1.objects[app.timePassed])
+    if (app.timePassed + universal_offset) in app.map1.objects:
+        app.currentObjects.append(app.map1.objects[app.timePassed + universal_offset])
+        app.currentApproach.append(app.map1.objects[app.timePassed + universal_offset])
+    if (app.timePassed - 2 * app.map1.approachTiming + universal_offset) in app.map1.objects:
+        app.currentObjects.pop[0]
+        app.currentApproach.pop[0]
 
 def redrawAll(app, canvas):
-    canvas.create_image(app.cx - 500, app.cy - 500, image = ImageTk.PhotoImage(app.background))
-    canvas.create_oval(250, 50, 350, 150, fill='pink')
+    drawBackground(app, canvas)
     drawCursor(app, canvas)
+
 
 runApp(width=res_width, height=res_height) 
