@@ -36,6 +36,7 @@ class Map():
         self.mapID = mapID
         self.setID = setID
         self.background = background
+        
         self.HP = HP
         self.CS = CS
         self.OD = OD
@@ -58,15 +59,12 @@ class Map():
         self.objects[object.drawTime] = object
 
 class HitObject(Map):
-    def __init__(self, map, x, y, hitTime, type, objectParams):
+    def __init__(self, map, x, y, time, type, objectParams):
         self.map = map
         self.x = x
         self.y = y
-        self.hitTime = hitTime
-        self.hit300 = (hitTime - map.hitWindow300, hitTime + map.hitWindow300)
-        self.hit100 = (hitTime - map.hitWindow100, hitTime + map.hitWindow100)
-        self.hit50 = (hitTime - map.hitWindow50, hitTime + map.hitWindow50)
-        self.drawTime = (hitTime - map.approachTiming, hitTime + map.approachTiming)
+        self.time = time
+        self.drawTime = (time - map.approachTiming, time + map.approachTiming)
         self.type = type
         self.objectParams = objectParams
         # self.bounds = (x - map.r, y - map.r, x + map.r, y + map.r)
@@ -88,7 +86,7 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
         self.loops = 1
         pygame.mixer.music.load(path)
 
-    # Loops = number of times to loop the sound.        app.currentObjects.pop[0]
+    # Loops = number of times to loop the sound.       
 
     # If loops = 1 or 1, play it once.
     # If loops > 1, play it loops + 1 times.
@@ -117,51 +115,70 @@ def appStarted(app):
     app.music.start(1)
 
     app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 4, 10, 10, 5)
-    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 1500, 1, None)
+    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 1, None)
     app.map1.addObject(app.circle1)
 
-    app.currentObjects = []
-    app.currentApproach = []
+    app.currentObjects = [] # Holds the current objects and their beginning draw time 
+    app.currentObjectsEnd = [] # Holds the current objects' ending draw time
 
     app.cx = app.width / 2
     app.cy = app.height / 2
     app.cursorX = 0
     app.cursorY = 0
-    app.timePassed = 0
+    app.prevX = None
+    app.prevY = None
+    app.timePassed = 0 + universal_offset
     app.timerDelay = 1
+    app.accuracy = None
+  
 
     # For approach circle drawing
-    appearTime = app.map1.approachTiming * 2
-    sizeChange = 2 * app.map1.r
-    sizeDecrements = (sizeChange / appearTime) * app.timerDelay
+    sizeChange = 2 * app.map1.r # From 3x hit object to 1x hit object
+    sizeDecr = (sizeChange / app.map1.approachTiming) * app.timerDelay
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
+    app.hit300Raw = app.loadImage("skins/current/hit300.png")        
+    app.hit100Raw = app.loadImage("skins/current/hit100.png")
+    app.hit50Raw = app.loadImage("skins/current/hit50.png")
+    app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
     app.bgRaw = app.loadImage("meikaruza.jpg")
 
+
+
     app.circle = app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r))
     app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
+    app.hit300 = app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.map1.r))
+    app.hit100 = app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.map1.r))
+    app.hit50 = app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.map1.r))
+    app.hit0 = app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r))
     app.cursor = app.scaleImage(app.cursorRaw, cursor_size)
     app.bg = app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width))
     
 
 def drawHitObject(app, canvas):
+    print(app.accuracy)
     if len(app.currentObjects) > 0: # Prevents out of index error for when there are no objects yet
         for hitObject in app.currentObjects:
             if hitObject.type == 1:
                 drawCircle(app, canvas)
+                drawApproach(app, canvas)
             elif hitObject.type == 2:
                 drawSlider(app, canvas)
+                drawApproach(app, canvas)
             else:
                 drawSpinner(app, canvas)
+
             
 
-# def drawApproach(app, canvas, hitObject):
-#     appearTime = hitObject.approachTiming * 2
-#     sizeChange = 2 * hitObject.r
-#     sizeDecrements = (sizeChange / appearTime) * app.timerDelay
-#     canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.approach))
+def drawApproach(app, canvas):
+    current = app.currentObjects[0]
+    elapsed = app.timePassed - current.drawTime[0] 
+    scale = 1 + (2 * (elapsed / current.map.approachTiming)) # Questionable scaling
+    print(scale)
+    canvas.create_image(current.x, current.y, image = ImageTk.PhotoImage(
+        app.scaleImage(app.approach, 1 / scale)))
 
 
 def drawCircle(app, canvas):
@@ -178,8 +195,17 @@ def drawCursor(app, canvas):
     canvas.create_image(app.cursorX, app.cursorY, image = ImageTk.PhotoImage(app.cursor))
 
 def drawBackground(app, canvas):
-    canvas.create_image(app.width / 2, app.height / 2, image = ImageTk.PhotoImage(app.bg))
+    canvas.create_image(app.cx, app.cy, image = ImageTk.PhotoImage(app.bg))
 
+def drawAcc(app, canvas):
+    if app.accuracy == 300:
+        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit300))
+    elif app.accuracy == 100:
+        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit100))
+    elif app.accuracy == 50:
+        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit50))
+    elif app.accuracy == 0:
+        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit0))
     
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
@@ -189,26 +215,41 @@ def appStopped(app):
     app.music.stop()
 
 def keyPressed(app, event):
-    [objcx, objcy] = [app.currentObjects[0].x, app.currentObjects[0].y]
-    dist = math.dist([objcx, objcy], [app.cursorX, app.cursorY])
-    
-    if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
-        pygame.mixer.Sound.play(app.sound)
-        app.currentObjects.pop[0]
-        app.currentApproach.pop[0]
+    if len(app.currentObjects) > 0:
+        current = app.currentObjects[0]
+        dist = math.dist([current.x, current.y], [app.cursorX, app.cursorY])
+        
+        if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
+            pygame.mixer.Sound.play(app.sound)
+            if abs(app.timePassed - current.time) < current.map.hitWindow300:
+                app.accuracy = 300
+            elif abs(app.timePassed - current.time) < current.map.hitWindow100:
+                app.accuracy = 100
+            else:
+                app.accuracy = 50
+            app.currentObjects.pop(0)
+            app.currentObjectsEnd.pop(0)
 
 def timerFired(app):
-    app.timePassed += 1
-    if (app.timePassed + universal_offset) in app.map1.objects:
-        app.currentObjects.append(app.map1.objects[app.timePassed + universal_offset])
-        app.currentApproach.append(app.map1.objects[app.timePassed + universal_offset])
-    if (app.timePassed - 2 * app.map1.approachTiming + universal_offset) in app.map1.objects:
-        app.currentObjects.pop[0]
-        app.currentApproach.pop[0]
+    app.timePassed += 10
+    print(app.timePassed)
+    if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
+        app.currentObjects.append(app.map1.objects[app.timePassed, 
+        app.timePassed + 2 * app.map1.approachTiming])
+        app.currentObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
+        app.prevX, app.prevY = app.currentObjects[0].x, app.currentObjects[0].y
+    if app.timePassed in app.currentObjectsEnd:
+        app.currentObjects.pop(0)
+        app.currentObjectsEnd.pop(0)
+        app.accuracy = 0    
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
     drawCursor(app, canvas)
+    drawHitObject(app, canvas)
+    drawAcc(app, canvas)
+
+
 
 
 runApp(width=res_width, height=res_height) 
