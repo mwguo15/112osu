@@ -55,6 +55,8 @@ class Map():
         # All calculations for hit windows, approach rates, and circle radius found here 
         # https://www.reddit.com/r/osugame/comments/6phntt/difficulty_settings_table_with_all_values/
 
+        self.localScores = []
+
     def addObject(self, object):
         self.objects[object.drawTime] = object
 
@@ -67,8 +69,7 @@ class HitObject(Map):
         self.drawTime = (time - map.approachTiming, time + map.approachTiming)
         self.type = type
         self.objectParams = objectParams
-        # self.bounds = (x - map.r, y - map.r, x + map.r, y + map.r)
-        # self.approachBounds = (x - 1.5*map.r, y - 1.5*map.r, x + 1.5*map.r, y + 1.5*map.r)
+
 
 class Circle(HitObject):
     def __init__(self, x, y, hitTime, skin):
@@ -108,7 +109,7 @@ def imgScale(img, base):
 def appStarted(app):
     # map = Map() from importing
     pygame.mixer.pre_init(44100, -16, 1, 512) 
-    # Used to remove sound delay, especially with histounds, taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
+    # Used to remove sound delay, especially with histounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
     pygame.mixer.init()
     app.sound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.music = Sound("audio/audio.mp3")
@@ -118,6 +119,8 @@ def appStarted(app):
     app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 1, None)
     app.map1.addObject(app.circle1)
 
+    app.currMap = app.map1
+
     app.currentObjects = [] # Holds the current objects and their beginning draw time 
     app.currentObjectsEnd = [] # Holds the current objects' ending draw time
 
@@ -125,16 +128,23 @@ def appStarted(app):
     app.cy = app.height / 2
     app.cursorX = 0
     app.cursorY = 0
-    app.prevX = None
+    app.prevX = None # prevX and prevY used so drawAcc knows where to draw the accuracy symbol even after the hit object has been removed
     app.prevY = None
     app.timePassed = 0 + universal_offset
     app.timerDelay = 1
-    app.accuracy = None
+
+    app.currAcc = None
+    app.runningAcc = 100
+    app.objCount = 0
+    app.scalingScore = 0
+    app.rawScore = 0
+    app.currCombo = 0
+    app.highestCombo = 0
   
 
-    # For approach circle drawing
-    sizeChange = 2 * app.map1.r # From 3x hit object to 1x hit object
-    sizeDecr = (sizeChange / app.map1.approachTiming) * app.timerDelay
+    # # For approach circle drawing
+    # sizeChange = 2 * app.map1.r 
+    # sizeDecr = (sizeChange / app.map1.approachTiming) * app.timerDelay
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
@@ -158,7 +168,7 @@ def appStarted(app):
     
 
 def drawHitObject(app, canvas):
-    print(app.accuracy)
+    print(app.currAcc)
     if len(app.currentObjects) > 0: # Prevents out of index error for when there are no objects yet
         for hitObject in app.currentObjects:
             if hitObject.type == 1:
@@ -198,21 +208,41 @@ def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = ImageTk.PhotoImage(app.bg))
 
 def drawAcc(app, canvas):
-    if app.accuracy == 300:
+    if app.currAcc == 300:
         canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit300))
-    elif app.accuracy == 100:
+    elif app.currAcc == 100:
         canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit100))
-    elif app.accuracy == 50:
+    elif app.currAcc == 50:
         canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit50))
-    elif app.accuracy == 0:
+    elif app.currAcc == 0:
         canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit0))
-    
+
+def drawGameUI(app, canvas):
+    return 42
+
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
 
 def appStopped(app):
     app.sound.stop()
     app.music.stop()
+
+def updateRun(app):
+    if app.currCombo > app.highestCombo:
+        app.highestCombo = app.currCombo
+    if app.currAcc == 0:
+        app.currCombo = 0
+    else:
+        app.currCombo += 1
+    app.currentObjects.pop(0)
+    app.currentObjectsEnd.pop(0)
+    app.objCount += 1
+    app.rawScore += app.currAcc
+    app.scalingScore += 1 # Change when scaling is implemented
+    app.runningAcc = app.rawScore / app.objCount
+    
+
+
 
 def keyPressed(app, event):
     if len(app.currentObjects) > 0:
@@ -222,16 +252,15 @@ def keyPressed(app, event):
         if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
             pygame.mixer.Sound.play(app.sound)
             if abs(app.timePassed - current.time) < current.map.hitWindow300:
-                app.accuracy = 300
+                app.currAcc = 300
             elif abs(app.timePassed - current.time) < current.map.hitWindow100:
-                app.accuracy = 100
+                app.currAcc = 100
             else:
-                app.accuracy = 50
-            app.currentObjects.pop(0)
-            app.currentObjectsEnd.pop(0)
+                app.currAcc = 50
+            updateRun(app)
 
 def timerFired(app):
-    app.timePassed += 10
+    app.timePassed += 10 # this is so sad 
     print(app.timePassed)
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currentObjects.append(app.map1.objects[app.timePassed, 
@@ -239,12 +268,12 @@ def timerFired(app):
         app.currentObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
         app.prevX, app.prevY = app.currentObjects[0].x, app.currentObjects[0].y
     if app.timePassed in app.currentObjectsEnd:
-        app.currentObjects.pop(0)
-        app.currentObjectsEnd.pop(0)
-        app.accuracy = 0    
+        app.currAcc = 0
+        updateRun(app)
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
+    drawGameUI(app, canvas)
     drawCursor(app, canvas)
     drawHitObject(app, canvas)
     drawAcc(app, canvas)
