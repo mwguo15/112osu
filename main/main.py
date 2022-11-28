@@ -168,7 +168,6 @@ def appStarted(app):
     
 
 def drawHitObject(app, canvas):
-    print(app.currAcc)
     if len(app.currentObjects) > 0: # Prevents out of index error for when there are no objects yet
         for hitObject in app.currentObjects:
             if hitObject.type == 1:
@@ -240,8 +239,6 @@ def updateRun(app):
     app.rawScore += app.currAcc
     app.scalingScore += 1 # Change when scaling is implemented
     app.runningAcc = app.rawScore / app.objCount
-    
-
 
 
 def keyPressed(app, event):
