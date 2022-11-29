@@ -106,45 +106,58 @@ def imgScale(img, base):
     scale = base / width
     return scale
 
+def kthDigit(num, k):
+    return (num // 10**(k-1)) % 10
+
+
 def appStarted(app):
     # map = Map() from importing
-    pygame.mixer.pre_init(44100, -16, 1, 512) 
+
+    app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
+
+    pygame.mixer.pre_init(44100, -16, 1, 1024) 
     # Used to remove sound delay, especially with histounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
     pygame.mixer.init()
-    app.sound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
+    app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
+    # app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
     app.music = Sound("audio/audio.mp3")
-    app.music.start(1)
 
-    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 4, 10, 10, 5)
+    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 4, 0, 10, 5)
     app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 1, None)
+    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 600, 1, None)
+    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 700, 1, None)
+    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 800, 1, None)
+    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 900, 1, None)
+    app.circle6 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 1, None)
     app.map1.addObject(app.circle1)
+    app.map1.addObject(app.circle2)
+    app.map1.addObject(app.circle3)
+    app.map1.addObject(app.circle4)
+    app.map1.addObject(app.circle5)
+    app.map1.addObject(app.circle6)
+    
 
     app.currMap = app.map1
 
-    app.currentObjects = [] # Holds the current objects and their beginning draw time 
-    app.currentObjectsEnd = [] # Holds the current objects' ending draw time
+    app.currObjects = [] # Holds the current drawn objects 
+    app.currObjectsEnd = [] # Holds the current drawn objects' ending draw time
+    app.currDrawAcc = [] # Holds the accuracy symbols that are currently being drawn
 
     app.cx = app.width / 2
     app.cy = app.height / 2
     app.cursorX = 0
     app.cursorY = 0
-    app.prevX = None # prevX and prevY used so drawAcc knows where to draw the accuracy symbol even after the hit object has been removed
-    app.prevY = None
     app.timePassed = 0 + universal_offset
     app.timerDelay = 1
+    app.timeAfterDrawAcc = 0
 
     app.currAcc = None
-    app.runningAcc = 100
+    app.totalAcc = 100.00
     app.objCount = 0
-    app.scalingScore = 0
+    app.score = 19283743
     app.rawScore = 0
     app.currCombo = 0
     app.highestCombo = 0
-  
-
-    # # For approach circle drawing
-    # sizeChange = 2 * app.map1.r 
-    # sizeDecr = (sizeChange / app.map1.approachTiming) * app.timerDelay
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
@@ -155,7 +168,34 @@ def appStarted(app):
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
     app.bgRaw = app.loadImage("meikaruza.jpg")
 
+    app.combo0 = app.loadImage("skins/current/combo-0.png")
+    app.combo1 = app.loadImage("skins/current/combo-1.png")
+    app.combo2 = app.loadImage("skins/current/combo-2.png")
+    app.combo3 = app.loadImage("skins/current/combo-3.png")
+    app.combo4 = app.loadImage("skins/current/combo-4.png")
+    app.combo5 = app.loadImage("skins/current/combo-5.png")
+    app.combo6 = app.loadImage("skins/current/combo-6.png")
+    app.combo7 = app.loadImage("skins/current/combo-7.png")
+    app.combo8 = app.loadImage("skins/current/combo-8.png")
+    app.combo9 = app.loadImage("skins/current/combo-9.png")
+    app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
+    app.score0 = app.loadImage("skins/current/score-0.png")
+    app.score1 = app.loadImage("skins/current/score-1.png")
+    app.score2 = app.loadImage("skins/current/score-2.png")
+    app.score3 = app.loadImage("skins/current/score-3.png")
+    app.score4 = app.loadImage("skins/current/score-4.png")
+    app.score5 = app.loadImage("skins/current/score-5.png")
+    app.score6 = app.loadImage("skins/current/score-6.png")
+    app.score7 = app.loadImage("skins/current/score-7.png")
+    app.score8 = app.loadImage("skins/current/score-8.png")
+    app.score9 = app.loadImage("skins/current/score-9.png")
+    app.percent = app.loadImage("skins/current/score-percent.png")
+    app.dot = app.loadImage("skins/current/score-dot.png")
 
+    app.comboNums = {0: app.combo0, 1: app.combo1, 2: app.combo2, 3: app.combo3, 4: app.combo4, 
+    5: app.combo5, 6: app.combo6, 7: app.combo7, 8: app.combo8, 9: app.combo9}
+    app.scoreNums = {0: app.score0, 1: app.score1, 2: app.score2, 3: app.score3, 4: app.score4, 
+    5: app.score5, 6: app.score6, 7: app.score7, 8: app.score8, 9: app.score9}
 
     app.circle = app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r))
     app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
@@ -165,66 +205,203 @@ def appStarted(app):
     app.hit0 = app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r))
     app.cursor = app.scaleImage(app.cursorRaw, cursor_size)
     app.bg = app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width))
-    
+    app.comboX = app.scaleImage(app.comboXRaw, 0.5)
+
 
 def drawHitObject(app, canvas):
-    if len(app.currentObjects) > 0: # Prevents out of index error for when there are no objects yet
-        for hitObject in app.currentObjects:
+    if len(app.currObjects) > 0: # Prevents out of index error for when there are no objects yet
+        for hitObject in app.currObjects:
             if hitObject.type == 1:
-                drawCircle(app, canvas)
-                drawApproach(app, canvas)
+                drawCircle(app, canvas, hitObject)
+                drawApproach(app, canvas, hitObject)
             elif hitObject.type == 2:
                 drawSlider(app, canvas)
                 drawApproach(app, canvas)
             else:
                 drawSpinner(app, canvas)
+   
 
-            
-
-def drawApproach(app, canvas):
-    current = app.currentObjects[0]
-    elapsed = app.timePassed - current.drawTime[0] 
-    scale = 1 + (2 * (elapsed / current.map.approachTiming)) # Questionable scaling
-    print(scale)
-    canvas.create_image(current.x, current.y, image = ImageTk.PhotoImage(
+def drawApproach(app, canvas, hitObject):
+    elapsed = app.timePassed - hitObject.drawTime[0] 
+    scale = 1 + 2 * (elapsed / hitObject.map.approachTiming) 
+    canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(
         app.scaleImage(app.approach, 1 / scale)))
 
 
-def drawCircle(app, canvas):
-    current = app.currentObjects[0]
-    canvas.create_image(current.x, current.y, image = ImageTk.PhotoImage(app.circle))
+def drawCircle(app, canvas, hitObject):
+    canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.circle))
+
 
 def drawSlider(app, canvas, hitObject):
     return 42
 
+
 def drawSpinner(app, canvas, hitObject):
     return 42
+
 
 def drawCursor(app, canvas):
     canvas.create_image(app.cursorX, app.cursorY, image = ImageTk.PhotoImage(app.cursor))
 
+
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = ImageTk.PhotoImage(app.bg))
 
+
 def drawAcc(app, canvas):
-    if app.currAcc == 300:
-        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit300))
-    elif app.currAcc == 100:
-        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit100))
-    elif app.currAcc == 50:
-        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit50))
-    elif app.currAcc == 0:
-        canvas.create_image(app.prevX, app.prevY, image = ImageTk.PhotoImage(app.hit0))
+    if len(app.currDrawAcc) > 0: 
+        for acc in app.currDrawAcc:
+            x, y, accuracy = acc[0], acc[1], acc[2]
+            if accuracy == 300:
+                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit300))
+            elif accuracy == 100:
+                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit100))
+            elif accuracy == 50:
+                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit50))
+            elif accuracy == 0:
+                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit0))
+
 
 def drawGameUI(app, canvas):
+    drawCombo(app, canvas)
+    drawTotalAcc(app, canvas)
+    drawTimeRemaining(app, canvas)
+    drawKeyPresses(app, canvas)
+    drawScore(app, canvas)
+    drawHP(app, canvas)
+    drawLocalScores(app, canvas)
+
+
+def drawCombo(app, canvas):
+    ones = kthDigit(app.currCombo, 1)
+    tens = kthDigit(app.currCombo, 2)
+    hundreds = kthDigit(app.currCombo, 3)
+    thousands = kthDigit(app.currCombo, 4)
+
+    if app.currCombo < 10:
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+    elif app.currCombo < 100:
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones])) 
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+    elif app.currCombo < 1000:
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[hundreds]))
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
+        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+    elif app.currCombo < 10000:
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[thousands]))
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[hundreds]))
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
+        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
+        canvas.create_image(7 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+
+
+def drawScore(app, canvas):
+    ones = kthDigit(app.score, 1)
+    tens = kthDigit(app.score, 2)
+    hundreds = kthDigit(app.score, 3)
+    thousands = kthDigit(app.score, 4)
+    tenthousands = kthDigit(app.score, 5)
+    hunthousands = kthDigit(app.score, 6)
+    millions = kthDigit(app.score, 7)
+    tenmillions = kthDigit(app.score, 8)
+    
+    canvas.create_image(99 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[ones]))
+    canvas.create_image(97.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tens]))
+    canvas.create_image(96 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[hundreds]))
+    canvas.create_image(94.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[thousands]))
+    canvas.create_image(93 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tenthousands]))
+    canvas.create_image(91.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[hunthousands]))
+    canvas.create_image(90 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[millions]))
+    canvas.create_image(88.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tenmillions]))
+
+
+def drawTotalAcc(app, canvas):
+    hundreths = kthDigit(app.totalAcc * 100, 1)
+    tenths = kthDigit(app.totalAcc * 100, 2)
+    ones = kthDigit(app.totalAcc * 100, 3)
+    tens = kthDigit(app.totalAcc * 100, 4)
+    
+    canvas.create_image(99 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.percent, 0.65)))
+    canvas.create_image(98 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[hundreths], 0.65)))
+    canvas.create_image(97 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[tenths], 0.65)))
+    canvas.create_image(96 * app.width / 100, 2.25 * app.height / 50, image = ImageTk.PhotoImage(app.dot))
+    canvas.create_image(95 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[ones], 0.65)))
+    if app.totalAcc >= 10:
+        canvas.create_image(94 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[tens], 0.65)))
+    if str(app.totalAcc) == "100.0":
+        canvas.create_image(93 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[1], 0.65)))
+
+
+def drawTimeRemaining(app, canvas):
     return 42
+
+
+def drawKeyPresses(app, canvas):
+    return 42
+
+
+def drawHP(app, canvas):
+    return 42
+
+def drawLocalScores(app, canvas):
+    return 42
+
+def keyPressed(app, event):
+    if app.waitingForFirstKeyPress:
+        app.waitingForFirstKeyPress = False
+        app.music.start(1)
+    if len(app.currObjects) > 0:
+        for hitObject in app.currObjects:
+            dist = math.dist([hitObject.x, hitObject.y], [app.cursorX, app.cursorY])
+            
+            if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
+                if abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow300:
+                    pygame.mixer.Sound.play(app.hitsound)
+                    app.currAcc = 300
+                elif abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow100:
+                    pygame.mixer.Sound.play(app.hitsound)
+                    app.currAcc = 100
+                elif abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow50:
+                    pygame.mixer.Sound.play(app.hitsound)
+                    app.currAcc = 50
+                else:
+                    # if app.currCombo >= 20:
+                    #     pygame.mixer.Sound.play(app.misssound)
+                    app.currAcc = 0
+                app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
+                updateRun(app)
+
+
+def timerFired(app):
+    if app.waitingForFirstKeyPress:
+        return
+
+    app.timePassed += 20 # this is so sad 
+    if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
+        app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
+        app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
+    if app.timePassed in app.currObjectsEnd:
+        app.currAcc = 0
+        hitObject = app.currObjects[0]
+        app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
+        updateRun(app)
+    if len(app.currDrawAcc) > 0:
+        app.timeAfterDrawAcc += 10
+        if app.timeAfterDrawAcc > 50:
+            app.currDrawAcc.pop(0)
+            app.timeAfterDrawAcc = 0
+
 
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
 
+
 def appStopped(app):
-    app.sound.stop()
     app.music.stop()
+
 
 def updateRun(app):
     if app.currCombo > app.highestCombo:
@@ -233,49 +410,20 @@ def updateRun(app):
         app.currCombo = 0
     else:
         app.currCombo += 1
-    app.currentObjects.pop(0)
-    app.currentObjectsEnd.pop(0)
+    app.currObjects.pop(0)
+    app.currObjectsEnd.pop(0)
     app.objCount += 1
     app.rawScore += app.currAcc
-    app.scalingScore += 1 # Change when scaling is implemented
-    app.runningAcc = app.rawScore / app.objCount
+    app.score += 1 # Change when scaling is implemented
+    app.totalAcc = (app.rawScore / 3) / app.objCount
 
-
-def keyPressed(app, event):
-    if len(app.currentObjects) > 0:
-        current = app.currentObjects[0]
-        dist = math.dist([current.x, current.y], [app.cursorX, app.cursorY])
-        
-        if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
-            pygame.mixer.Sound.play(app.sound)
-            if abs(app.timePassed - current.time) < current.map.hitWindow300:
-                app.currAcc = 300
-            elif abs(app.timePassed - current.time) < current.map.hitWindow100:
-                app.currAcc = 100
-            else:
-                app.currAcc = 50
-            updateRun(app)
-
-def timerFired(app):
-    app.timePassed += 10 # this is so sad 
-    print(app.timePassed)
-    if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
-        app.currentObjects.append(app.map1.objects[app.timePassed, 
-        app.timePassed + 2 * app.map1.approachTiming])
-        app.currentObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
-        app.prevX, app.prevY = app.currentObjects[0].x, app.currentObjects[0].y
-    if app.timePassed in app.currentObjectsEnd:
-        app.currAcc = 0
-        updateRun(app)
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
     drawGameUI(app, canvas)
     drawCursor(app, canvas)
-    drawHitObject(app, canvas)
+    drawHitObject(app, canvas)        
     drawAcc(app, canvas)
-
-
 
 
 runApp(width=res_width, height=res_height) 
