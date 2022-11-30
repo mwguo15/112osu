@@ -1,5 +1,5 @@
 from cmu_112_graphics import *
-from importing import *
+# from importing import *
 import math
 import pygame
 
@@ -19,6 +19,7 @@ universal_offset = 0
 background_dim = 0
 maps = []
 
+
 # From skin.ini files, need to read later on
 SliderBackground = 'gray'
 SliderBorder = 'black'
@@ -28,14 +29,13 @@ SliderBorder = 'black'
 
 
 class Map():
-    def __init__(self, title, artist, song, creator, mapID, setID, background, HP, CS, OD, AR, starRating):
+    def __init__(self, title, artist, creator, mapID, setID, background, HP, CS, OD, AR, starRating):
         # HP = HP drain rate, CS = circle size, OD = overall difficulty, AR = approach rate
         # Definitions of these difficulty setting terms can be found at 
         # https://osu.ppy.sh/wiki/en/Client/Beatmap_editor/Song_Setup#difficulty
 
         self.title = title
         self.artist = artist
-        self.song = song
         self.creator = creator
         self.mapID = mapID
         self.setID = setID
@@ -65,6 +65,7 @@ class Map():
     def addObjects(self, objectList):
         for object in objectList:
             self.objects[object.drawTime] = object
+
 
 class HitObject(Map):
     def __init__(self, map, x, y, time, type, objectParams):
@@ -135,18 +136,27 @@ def appStarted(app):
     pygame.mixer.init()
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
-    app.music = Sound("audio/audio.mp3")
+    app.music = Sound("audio/ferb.mp3")
 
-    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 0, 0, 10, 5)
+    app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3)
     app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None)
     app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 700, 'Circle', None)
     app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 900, 'Circle', None)
     app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
     app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
-    app.circle6 = HitObject(app.map1, app.width - 50, app.height - 50, 1500, 'Circle', None)
-    app.slider1 = HitObject(app.map1, 100, 100, 500, 'Slider', (300, 1))
+    app.circle6 = HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None)
+    app.slider1 = HitObject(app.map1, 100, 100, 1900, 'Slider', (300, 1))
+
+    # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
+    # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
+    # app.circle3 = HitObject(app.map1, 192 * 3, 153, 13377 // 15, 'Circle', None)
+    # app.circle4 = HitObject(app.map1, 31 * 3, 295 * 3, 13543 // 15, 'Circle', None)
+    # app.circle5 = HitObject(app.map1, 238 * 3, 260 * 3, 13691 // 15, 'Circle', None)
+    # app.circle6 = HitObject(app.map1, 192 * 3, 153 * 3, 14031 // 15, 'Circle', None)
+    # ^ Trying to take actual map values to map it correctly 
+
     app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
-    # app.map1.addObjects([app.slider1])
+    app.map1.addObjects([app.slider1])  # Slider testing
 
     app.currMap = app.map1
 
@@ -181,7 +191,7 @@ def appStarted(app):
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
-    app.bgRaw = app.loadImage("meikaruza.jpg")
+    app.bgRaw = app.loadImage("phineas and ferb.jpg")
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
     app.percentRaw = app.loadImage("skins/current/score-percent.png")
     app.score0Raw = app.loadImage("skins/current/score-0.png")
@@ -194,6 +204,7 @@ def appStarted(app):
     app.score7Raw = app.loadImage("skins/current/score-7.png")
     app.score8Raw = app.loadImage("skins/current/score-8.png")
     app.score9Raw = app.loadImage("skins/current/score-9.png")
+
 
     app.combo0 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-0.png"))
     app.combo1 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-1.png"))
@@ -468,7 +479,7 @@ def timerFired(app):
     if app.waitingForFirstKeyPress:
         return
     print(app.timePassed)
-    app.timePassed += 5 # this is so sad 
+    app.timePassed += 5
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
         app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
@@ -515,6 +526,7 @@ def redrawAll(app, canvas):
     drawGameUI(app, canvas)
     drawHitObject(app, canvas)        
     drawAcc(app, canvas)
+    print(app.map1.objects)
 
 
 runApp(width=res_width, height=res_height) 
