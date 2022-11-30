@@ -15,9 +15,13 @@ music_vol = 1
 master_vol = 1
 cursor_size = 1
 skin = dict()
-universal_offset = 10
+universal_offset = 0
+background_dim = 0
 maps = []
 
+# From skin.ini files, need to read later on
+SliderBackground = 'gray'
+SliderBorder = 'black'
 
 # Map and object definitions taken from 
 # https://osu.ppy.sh/wiki/en/Client/File_formats/Osu_%28file_format%29
@@ -58,8 +62,9 @@ class Map():
 
         self.localScores = []
 
-    def addObject(self, object):
-        self.objects[object.drawTime] = object
+    def addObjects(self, objectList):
+        for object in objectList:
+            self.objects[object.drawTime] = object
 
 class HitObject(Map):
     def __init__(self, map, x, y, time, type, objectParams):
@@ -72,15 +77,20 @@ class HitObject(Map):
         self.objectParams = objectParams
 
 
-class Slider(HitObject):
-    def __init__(self, x, y, length, repeats, hitTime):
-        super().init(x, y, hitTime)
-        self.repeats = repeats
-        self.possibleEnds = {(x + length, y), (x, y + length), (x - length, y), (x, y - length)}
+class Slider():
+    def __init__(self, HitObject):
+        self.x = HitObject.x
+        self.y = HitObject.y
+        self.time = HitObject.time
+        self.length = HitObject.objectParams[0]
+        self.repeats = HitObject.objectParams[1]
+        self.possibleEnds = {(self.x + self.length, self.y, 'Right'), (self.x, self.y + self.length, 'Down'), 
+        (self.x - self.length, self.y, 'Left'), (self.x, self.y - self.length, 'Up')}
         for end in self.possibleEnds:
             if ((end[0] > HitObject.map.r and end[0] < res_width - HitObject.map.r) 
             and (end[1] > HitObject.map.r and end[1] < res_height - HitObject.map.r)):
-                self.end = end
+                self.endX, self.endY = end[0], end[1]
+                self.direction = end[2]
 
 class Sound(object): # Taken from Animations Part 4 on the CS-112 website
     def __init__(self, path):
@@ -114,6 +124,10 @@ def kthDigit(num, k):
 def appStarted(app):
     # map = Map() from importing
 
+    pygame.init()
+
+    pygame.mouse.set_visible(False)
+
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
 
     pygame.mixer.pre_init(44100, -16, 1, 1024) 
@@ -125,19 +139,14 @@ def appStarted(app):
 
     app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 0, 0, 10, 5)
     app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None)
-    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 600, 'Circle', None)
-    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 700, 'Circle', None)
-    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 800, 'Circle', None)
-    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 900, 'Circle', None)
-    app.circle6 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 'Circle', None)
-    app.slider1 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 'Slider', None)
-    app.map1.addObject(app.circle1)
-    app.map1.addObject(app.circle2)
-    app.map1.addObject(app.circle3)
-    app.map1.addObject(app.circle4)
-    app.map1.addObject(app.circle5)
-    app.map1.addObject(app.circle6)
-    
+    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 700, 'Circle', None)
+    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 900, 'Circle', None)
+    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
+    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
+    app.circle6 = HitObject(app.map1, app.width - 50, app.height - 50, 1500, 'Circle', None)
+    app.slider1 = HitObject(app.map1, 100, 100, 500, 'Slider', (300, 1))
+    app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
+    # app.map1.addObjects([app.slider1])
 
     app.currMap = app.map1
 
@@ -167,53 +176,79 @@ def appStarted(app):
     app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
     app.sliderCircleRaw = app.loadImage("skins/current/sliderb.png")
     # app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
-    app.hit300Raw = app.loadImage("skins/current/hit300.png")        
+    app.hit300Raw = app.loadImage("skins/current/hit300.png")      
     app.hit100Raw = app.loadImage("skins/current/hit100.png")
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
     app.bgRaw = app.loadImage("meikaruza.jpg")
-
-    app.combo0 = app.loadImage("skins/current/combo-0.png")
-    app.combo1 = app.loadImage("skins/current/combo-1.png")
-    app.combo2 = app.loadImage("skins/current/combo-2.png")
-    app.combo3 = app.loadImage("skins/current/combo-3.png")
-    app.combo4 = app.loadImage("skins/current/combo-4.png")
-    app.combo5 = app.loadImage("skins/current/combo-5.png")
-    app.combo6 = app.loadImage("skins/current/combo-6.png")
-    app.combo7 = app.loadImage("skins/current/combo-7.png")
-    app.combo8 = app.loadImage("skins/current/combo-8.png")
-    app.combo9 = app.loadImage("skins/current/combo-9.png")
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
-    app.score0 = app.loadImage("skins/current/score-0.png")
-    app.score1 = app.loadImage("skins/current/score-1.png")
-    app.score2 = app.loadImage("skins/current/score-2.png")
-    app.score3 = app.loadImage("skins/current/score-3.png")
-    app.score4 = app.loadImage("skins/current/score-4.png")
-    app.score5 = app.loadImage("skins/current/score-5.png")
-    app.score6 = app.loadImage("skins/current/score-6.png")
-    app.score7 = app.loadImage("skins/current/score-7.png")
-    app.score8 = app.loadImage("skins/current/score-8.png")
-    app.score9 = app.loadImage("skins/current/score-9.png")
-    app.percent = app.loadImage("skins/current/score-percent.png")
-    app.dot = app.loadImage("skins/current/score-dot.png")
+    app.percentRaw = app.loadImage("skins/current/score-percent.png")
+    app.score0Raw = app.loadImage("skins/current/score-0.png")
+    app.score1Raw = app.loadImage("skins/current/score-1.png")
+    app.score2Raw = app.loadImage("skins/current/score-2.png")
+    app.score3Raw = app.loadImage("skins/current/score-3.png")
+    app.score4Raw = app.loadImage("skins/current/score-4.png")
+    app.score5Raw = app.loadImage("skins/current/score-5.png")
+    app.score6Raw = app.loadImage("skins/current/score-6.png")
+    app.score7Raw = app.loadImage("skins/current/score-7.png")
+    app.score8Raw = app.loadImage("skins/current/score-8.png")
+    app.score9Raw = app.loadImage("skins/current/score-9.png")
+
+    app.combo0 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-0.png"))
+    app.combo1 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-1.png"))
+    app.combo2 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-2.png"))
+    app.combo3 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-3.png"))
+    app.combo4 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-4.png"))
+    app.combo5 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-5.png"))
+    app.combo6 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-6.png"))
+    app.combo7 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-7.png"))
+    app.combo8 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-8.png"))
+    app.combo9 = ImageTk.PhotoImage(app.loadImage("skins/current/combo-9.png"))
+    app.acc0 = ImageTk.PhotoImage(app.scaleImage(app.score0Raw, 0.65))
+    app.acc1 = ImageTk.PhotoImage(app.scaleImage(app.score1Raw, 0.65))
+    app.acc2 = ImageTk.PhotoImage(app.scaleImage(app.score2Raw, 0.65))
+    app.acc3 = ImageTk.PhotoImage(app.scaleImage(app.score3Raw, 0.65))
+    app.acc4 = ImageTk.PhotoImage(app.scaleImage(app.score4Raw, 0.65))
+    app.acc5 = ImageTk.PhotoImage(app.scaleImage(app.score5Raw, 0.65))
+    app.acc6 = ImageTk.PhotoImage(app.scaleImage(app.score6Raw, 0.65))
+    app.acc7 = ImageTk.PhotoImage(app.scaleImage(app.score7Raw, 0.65))
+    app.acc8 = ImageTk.PhotoImage(app.scaleImage(app.score8Raw, 0.65))
+    app.acc9 = ImageTk.PhotoImage(app.scaleImage(app.score9Raw, 0.65))
+    app.score0 = ImageTk.PhotoImage(app.score0Raw)
+    app.score1 = ImageTk.PhotoImage(app.score1Raw)
+    app.score2 = ImageTk.PhotoImage(app.score2Raw)
+    app.score3 = ImageTk.PhotoImage(app.score3Raw)
+    app.score4 = ImageTk.PhotoImage(app.score4Raw)
+    app.score5 = ImageTk.PhotoImage(app.score5Raw)
+    app.score6 = ImageTk.PhotoImage(app.score6Raw)
+    app.score7 = ImageTk.PhotoImage(app.score7Raw)
+    app.score8 = ImageTk.PhotoImage(app.score8Raw)
+    app.score9 = ImageTk.PhotoImage(app.score9Raw)
+
+
+    app.comboX = ImageTk.PhotoImage(app.scaleImage(app.comboXRaw, 0.5))
+    app.scorepercent = ImageTk.PhotoImage(app.percentRaw)
+    app.accpercent = ImageTk.PhotoImage(app.scaleImage(app.percentRaw, 0.65))
+    app.dot = ImageTk.PhotoImage(app.loadImage("skins/current/score-dot.png"))
 
     app.comboNums = {0: app.combo0, 1: app.combo1, 2: app.combo2, 3: app.combo3, 4: app.combo4, 
     5: app.combo5, 6: app.combo6, 7: app.combo7, 8: app.combo8, 9: app.combo9}
+    app.accNums = {0: app.acc0, 1: app.acc1, 2: app.acc2, 3: app.acc3, 4: app.acc4, 
+    5: app.acc5, 6: app.acc6, 7: app.acc7, 8: app.acc8, 9: app.acc9}
     app.scoreNums = {0: app.score0, 1: app.score1, 2: app.score2, 3: app.score3, 4: app.score4, 
     5: app.score5, 6: app.score6, 7: app.score7, 8: app.score8, 9: app.score9}
 
-    app.circle = app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r))
+    app.circle = ImageTk.PhotoImage(app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
     app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
-    app.hit300 = app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.map1.r))
-    app.hit100 = app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.map1.r))
-    app.hit50 = app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.map1.r))
-    app.hit0 = app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r))
-    app.cursor = app.scaleImage(app.cursorRaw, cursor_size)
-    app.bg = app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width))
-    app.comboX = app.scaleImage(app.comboXRaw, 0.5)
+    app.hit300 = ImageTk.PhotoImage(app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.hit100 = ImageTk.PhotoImage(app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.hit50 = ImageTk.PhotoImage(app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.hit0 = ImageTk.PhotoImage(app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.cursor = ImageTk.PhotoImage(app.scaleImage(app.cursorRaw, cursor_size))
+    app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
 
-    app.circleR = app.circle.size[0] / 2
+    app.circleR = (3 * app.map1.r) / 2
 
 
 def drawHitObject(app, canvas):
@@ -223,8 +258,8 @@ def drawHitObject(app, canvas):
                 drawCircle(app, canvas, hitObject)
                 drawApproach(app, canvas, hitObject)
             elif hitObject.type == 'Slider':
-                drawSlider(app, canvas)
-                drawApproach(app, canvas)
+                drawSlider(app, canvas, hitObject)
+                drawApproach(app, canvas, hitObject)
             else:
                 drawSpinner(app, canvas)
    
@@ -234,19 +269,38 @@ def drawApproach(app, canvas, hitObject):
     scale = 1 + 2 * (elapsed / hitObject.map.approachTiming) 
     if scale >= 3:
         scale = 3 
-    canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(
-        app.scaleImage(app.approach, 1 / scale)))
+    canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.scaleImage(app.approach, 1 / scale)))
 
 
 def drawCircle(app, canvas, hitObject):
-    canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.circle))
+    canvas.create_image(hitObject.x, hitObject.y, image = app.circle)
 
 
 def drawSlider(app, canvas, hitObject):
     r = app.circleR
     slider = Slider(hitObject)
-    canvas.create_image(slider.x, slider.y, image = ImageTk.PhotoImage(app.circle))
-    # canvas.create_line(slider.x, slider.y - r, )
+    canvas.create_image(slider.x, slider.y, image = app.circle)
+    print(slider.direction)
+    if slider.direction == 'Left' or slider.direction == 'Right':
+        canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 10) # width should scale
+        canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 10)
+        if slider.direction == 'Left':
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180, start = 90)
+        else:
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180, start = 90)
+
+    if slider.direction == 'Up' or slider.direction == 'Down':
+        canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 10)
+        canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 10)
+        if slider.direction == 'Up':
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180)
+        else:
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180)
+
 
 
 
@@ -254,12 +308,8 @@ def drawSpinner(app, canvas, hitObject):
     return 42
 
 
-def drawCursor(app, canvas):
-    canvas.create_image(app.cursorX, app.cursorY, image = ImageTk.PhotoImage(app.cursor))
-
-
 def drawBackground(app, canvas):
-    canvas.create_image(app.cx, app.cy, image = ImageTk.PhotoImage(app.bg))
+    canvas.create_image(app.cx, app.cy, image = app.bg)
 
 
 def drawAcc(app, canvas):
@@ -267,16 +317,17 @@ def drawAcc(app, canvas):
         for acc in app.currDrawAcc:
             x, y, accuracy = acc[0], acc[1], acc[2]
             if accuracy == 300:
-                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit300))
+                canvas.create_image(x, y, image = app.hit300)
             elif accuracy == 100:
-                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit100))
+                canvas.create_image(x, y, image = app.hit100)
             elif accuracy == 50:
-                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit50))
+                canvas.create_image(x, y, image = app.hit50)
             elif accuracy == 0:
-                canvas.create_image(x, y, image = ImageTk.PhotoImage(app.hit0))
+                canvas.create_image(x, y, image = app.hit0)
 
 
 def drawGameUI(app, canvas):
+    drawCursor(app, canvas)
     drawCombo(app, canvas)
     drawTotalAcc(app, canvas)
     drawTimeRemaining(app, canvas)
@@ -288,6 +339,10 @@ def drawGameUI(app, canvas):
     drawLocalScores(app, canvas)
 
 
+def drawCursor(app, canvas):
+    canvas.create_image(app.cursorX, app.cursorY, image = app.cursor)
+
+
 def drawCombo(app, canvas):
     ones = kthDigit(app.currCombo, 1)
     tens = kthDigit(app.currCombo, 2)
@@ -295,23 +350,23 @@ def drawCombo(app, canvas):
     thousands = kthDigit(app.currCombo, 4)
 
     if app.currCombo < 10:
-        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
-        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = app.comboNums[ones])
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = app.comboX)
     elif app.currCombo < 100:
-        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
-        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones])) 
-        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = app.comboNums[tens])
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = app.comboNums[ones]) 
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = app.comboX)
     elif app.currCombo < 1000:
-        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[hundreds]))
-        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
-        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
-        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = app.comboNums[hundreds])
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = app.comboNums[tens])
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = app.comboNums[ones])
+        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = app.comboX)
     elif app.currCombo < 10000:
-        canvas.create_image(app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[thousands]))
-        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[hundreds]))
-        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[tens]))
-        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboNums[ones]))
-        canvas.create_image(7 * app.width / 100, 49 * app.height / 50, image = ImageTk.PhotoImage(app.comboX))
+        canvas.create_image(app.width / 100, 49 * app.height / 50, image = app.comboNums[thousands])
+        canvas.create_image(2.5 * app.width / 100, 49 * app.height / 50, image = app.comboNums[hundreds])
+        canvas.create_image(4 * app.width / 100, 49 * app.height / 50, image = app.comboNums[tens])
+        canvas.create_image(5.5 * app.width / 100, 49 * app.height / 50, image = app.comboNums[ones])
+        canvas.create_image(7 * app.width / 100, 49 * app.height / 50, image = app.comboX)
 
 
 def drawScore(app, canvas):
@@ -324,14 +379,14 @@ def drawScore(app, canvas):
     millions = kthDigit(app.score, 7)
     tenmillions = kthDigit(app.score, 8)
     
-    canvas.create_image(99 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[ones]))
-    canvas.create_image(97.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tens]))
-    canvas.create_image(96 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[hundreds]))
-    canvas.create_image(94.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[thousands]))
-    canvas.create_image(93 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tenthousands]))
-    canvas.create_image(91.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[hunthousands]))
-    canvas.create_image(90 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[millions]))
-    canvas.create_image(88.5 * app.width / 100, app.height / 50, image = ImageTk.PhotoImage(app.scoreNums[tenmillions]))
+    canvas.create_image(99 * app.width / 100, app.height / 50, image = app.scoreNums[ones])
+    canvas.create_image(97.5 * app.width / 100, app.height / 50, image = app.scoreNums[tens])
+    canvas.create_image(96 * app.width / 100, app.height / 50, image = app.scoreNums[hundreds])
+    canvas.create_image(94.5 * app.width / 100, app.height / 50, image = app.scoreNums[thousands])
+    canvas.create_image(93 * app.width / 100, app.height / 50, image = app.scoreNums[tenthousands])
+    canvas.create_image(91.5 * app.width / 100, app.height / 50, image = app.scoreNums[hunthousands])
+    canvas.create_image(90 * app.width / 100, app.height / 50, image = app.scoreNums[millions])
+    canvas.create_image(88.5 * app.width / 100, app.height / 50, image = app.scoreNums[tenmillions])
 
 
 def drawTotalAcc(app, canvas):
@@ -340,15 +395,15 @@ def drawTotalAcc(app, canvas):
     ones = kthDigit(app.totalAcc * 100, 3)
     tens = kthDigit(app.totalAcc * 100, 4)
     
-    canvas.create_image(99 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.percent, 0.65)))
-    canvas.create_image(98 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[hundreths], 0.65)))
-    canvas.create_image(97 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[tenths], 0.65)))
-    canvas.create_image(96 * app.width / 100, 2.25 * app.height / 50, image = ImageTk.PhotoImage(app.dot))
-    canvas.create_image(95 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[ones], 0.65)))
+    canvas.create_image(99 * app.width / 100, 2.5 * app.height / 50, image = app.accpercent)
+    canvas.create_image(98 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[hundreths])
+    canvas.create_image(97 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[tenths])
+    canvas.create_image(96 * app.width / 100, 2.25 * app.height / 50, image = app.dot)
+    canvas.create_image(95 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[ones])
     if app.totalAcc >= 10:
-        canvas.create_image(94 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[tens], 0.65)))
+        canvas.create_image(94 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[tens])
     if str(app.totalAcc) == "100.0":
-        canvas.create_image(93 * app.width / 100, 2.5 * app.height / 50, image = ImageTk.PhotoImage(app.scaleImage(app.scoreNums[1], 0.65)))
+        canvas.create_image(93 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[1])
 
 
 def drawTimeRemaining(app, canvas):
@@ -405,13 +460,15 @@ def keyPressed(app, event):
                     # app.currAcc = 0
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
                 updateRun(app)
+    timerFired(app)
+
 
 
 def timerFired(app):
     if app.waitingForFirstKeyPress:
         return
-
-    app.timePassed += 20 # this is so sad 
+    print(app.timePassed)
+    app.timePassed += 5 # this is so sad 
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
         app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
@@ -424,7 +481,7 @@ def timerFired(app):
         updateRun(app)
     if len(app.currDrawAcc) > 0:
         app.timeAfterDrawAcc += 10
-        if app.timeAfterDrawAcc > 25:
+        if app.timeAfterDrawAcc > 150:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
@@ -455,7 +512,6 @@ def updateRun(app):
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
-    drawCursor(app, canvas)
     drawGameUI(app, canvas)
     drawHitObject(app, canvas)        
     drawAcc(app, canvas)
