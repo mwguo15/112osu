@@ -14,7 +14,7 @@ effects_vol = 1
 music_vol = 1
 master_vol = 1
 cursor_size = 1
-skin = 0
+skin = dict()
 universal_offset = 10
 maps = []
 
@@ -42,6 +42,7 @@ class Map():
         self.OD = OD
         self.AR = AR
         self.starRating = starRating
+        self.diffMultiplier = HP + CS + OD + AR
         self.objects = dict()
 
         self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
@@ -71,15 +72,15 @@ class HitObject(Map):
         self.objectParams = objectParams
 
 
-class Circle(HitObject):
-    def __init__(self, x, y, hitTime, skin):
-        super().init(x, y, hitTime)
-        self.skin = skin
-
 class Slider(HitObject):
-    def __init__(self, x, y, objectParams, hitTime, skin):
-        super().init(x, y, hitTime, objectParams)
-        self.skin = skin
+    def __init__(self, x, y, length, repeats, hitTime):
+        super().init(x, y, hitTime)
+        self.repeats = repeats
+        self.possibleEnds = {(x + length, y), (x, y + length), (x - length, y), (x, y - length)}
+        for end in self.possibleEnds:
+            if ((end[0] > HitObject.map.r and end[0] < res_width - HitObject.map.r) 
+            and (end[1] > HitObject.map.r and end[1] < res_height - HitObject.map.r)):
+                self.end = end
 
 class Sound(object): # Taken from Animations Part 4 on the CS-112 website
     def __init__(self, path):
@@ -119,16 +120,17 @@ def appStarted(app):
     # Used to remove sound delay, especially with histounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
     pygame.mixer.init()
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
-    # app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
+    app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
     app.music = Sound("audio/audio.mp3")
 
-    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 4, 0, 10, 5)
-    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 1, None)
-    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 600, 1, None)
-    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 700, 1, None)
-    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 800, 1, None)
-    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 900, 1, None)
-    app.circle6 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 1, None)
+    app.map1 = Map('pizza', 'pizza', 'pizza', 'pizza', 1, 1, 'pizza', 10, 0, 0, 10, 5)
+    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None)
+    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 600, 'Circle', None)
+    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 700, 'Circle', None)
+    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 800, 'Circle', None)
+    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 900, 'Circle', None)
+    app.circle6 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 'Circle', None)
+    app.slider1 = HitObject(app.map1, app.width / 7, app.height / 7, 1000, 'Slider', None)
     app.map1.addObject(app.circle1)
     app.map1.addObject(app.circle2)
     app.map1.addObject(app.circle3)
@@ -151,16 +153,20 @@ def appStarted(app):
     app.timerDelay = 1
     app.timeAfterDrawAcc = 0
 
+    app.modMultiplier = 1
     app.currAcc = None
     app.totalAcc = 100.00
     app.objCount = 0
-    app.score = 19283743
+    app.score = 0
     app.rawScore = 0
     app.currCombo = 0
     app.highestCombo = 0
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
+    app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
+    app.sliderCircleRaw = app.loadImage("skins/current/sliderb.png")
+    # app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
     app.hit300Raw = app.loadImage("skins/current/hit300.png")        
     app.hit100Raw = app.loadImage("skins/current/hit100.png")
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
@@ -207,14 +213,16 @@ def appStarted(app):
     app.bg = app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width))
     app.comboX = app.scaleImage(app.comboXRaw, 0.5)
 
+    app.circleR = app.circle.size[0] / 2
+
 
 def drawHitObject(app, canvas):
     if len(app.currObjects) > 0: # Prevents out of index error for when there are no objects yet
         for hitObject in app.currObjects:
-            if hitObject.type == 1:
+            if hitObject.type == 'Circle':
                 drawCircle(app, canvas, hitObject)
                 drawApproach(app, canvas, hitObject)
-            elif hitObject.type == 2:
+            elif hitObject.type == 'Slider':
                 drawSlider(app, canvas)
                 drawApproach(app, canvas)
             else:
@@ -224,6 +232,8 @@ def drawHitObject(app, canvas):
 def drawApproach(app, canvas, hitObject):
     elapsed = app.timePassed - hitObject.drawTime[0] 
     scale = 1 + 2 * (elapsed / hitObject.map.approachTiming) 
+    if scale >= 3:
+        scale = 3 
     canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(
         app.scaleImage(app.approach, 1 / scale)))
 
@@ -233,7 +243,11 @@ def drawCircle(app, canvas, hitObject):
 
 
 def drawSlider(app, canvas, hitObject):
-    return 42
+    r = app.circleR
+    slider = Slider(hitObject)
+    canvas.create_image(slider.x, slider.y, image = ImageTk.PhotoImage(app.circle))
+    # canvas.create_line(slider.x, slider.y - r, )
+
 
 
 def drawSpinner(app, canvas, hitObject):
@@ -268,7 +282,9 @@ def drawGameUI(app, canvas):
     drawTimeRemaining(app, canvas)
     drawKeyPresses(app, canvas)
     drawScore(app, canvas)
+    drawHitError(app, canvas)
     drawHP(app, canvas)
+    drawDrainTime(app, canvas)
     drawLocalScores(app, canvas)
 
 
@@ -346,31 +362,47 @@ def drawKeyPresses(app, canvas):
 def drawHP(app, canvas):
     return 42
 
+
 def drawLocalScores(app, canvas):
+    return 42
+
+
+def drawHitError(app, canvas):
+    return 42
+
+
+def drawDrainTime(app, canvas): # Post MVP
     return 42
 
 def keyPressed(app, event):
     if app.waitingForFirstKeyPress:
         app.waitingForFirstKeyPress = False
         app.music.start(1)
-    if len(app.currObjects) > 0:
-        for hitObject in app.currObjects:
-            dist = math.dist([hitObject.x, hitObject.y], [app.cursorX, app.cursorY])
-            
-            if ((event.key in ('a', 's', 'A', 'S')) and dist < app.map1.r):
-                if abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow300:
+    if len(app.currObjects) > 0 and event.key in ('a', 's', 'A', 'S'):
+        hitObject = app.currObjects[0]
+        dist = math.dist([hitObject.x, hitObject.y], [app.cursorX, app.cursorY])
+        if hitObject.type == 'Circle':
+            if dist < app.circleR:
+                hitError = abs(app.timePassed - hitObject.time)
+                if hitError < hitObject.map.hitWindow300:
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 300
-                elif abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow100:
+                elif hitError < hitObject.map.hitWindow100:
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 100
-                elif abs(app.timePassed - hitObject.time) < hitObject.map.hitWindow50:
+                elif hitError < hitObject.map.hitWindow50:
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 50
                 else:
-                    # if app.currCombo >= 20:
-                    #     pygame.mixer.Sound.play(app.misssound)
+                    if app.currCombo >= 0:
+                        pygame.mixer.Sound.play(app.misssound)
                     app.currAcc = 0
+
+        # elif hitObject.type == 'Slider':
+        #     if dist < app.circleR:
+        #         hitError = abs(app.timePassed - hitObject.time)
+        #         if hitError > hitObject.map.hitWindow50:
+                    # app.currAcc = 0
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
                 updateRun(app)
 
@@ -387,10 +419,12 @@ def timerFired(app):
         app.currAcc = 0
         hitObject = app.currObjects[0]
         app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
+        if app.currCombo >= 0:
+            pygame.mixer.Sound.play(app.misssound)
         updateRun(app)
     if len(app.currDrawAcc) > 0:
         app.timeAfterDrawAcc += 10
-        if app.timeAfterDrawAcc > 50:
+        if app.timeAfterDrawAcc > 25:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
@@ -414,14 +448,15 @@ def updateRun(app):
     app.currObjectsEnd.pop(0)
     app.objCount += 1
     app.rawScore += app.currAcc
-    app.score += 1 # Change when scaling is implemented
+    app.score += app.currAcc * (1 + (max(app.currCombo - 1, 0) * app.modMultiplier * app.map1.diffMultiplier) / 25)
+    # Score scaling calculations taken from the osu! wiki: https://osu.ppy.sh/wiki/en/Gameplay/Score/ScoreV1/osu%21 
     app.totalAcc = (app.rawScore / 3) / app.objCount
 
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
-    drawGameUI(app, canvas)
     drawCursor(app, canvas)
+    drawGameUI(app, canvas)
     drawHitObject(app, canvas)        
     drawAcc(app, canvas)
 

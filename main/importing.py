@@ -23,3 +23,4 @@ def importMap(map_name): # Way of renaming files found here: https://www.guru99.
     os.rename("maps/1504828 Nanahoshi Kangengakudan - MAKE A LOSER (inst).osz", "maps/1504828 Nanahoshi Kangengakudan - MAKE A LOSER (inst).zip")
 
 
+
