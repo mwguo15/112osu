@@ -323,7 +323,8 @@ def drawSpinner(app, canvas, hitObject):
 
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = app.bg)
-    canvas.create_image(app.cx, app.cy, image = app.bgDim)
+    # canvas.create_rectangle(0, 0, app.width, app.height, fill = 'black', stipple = 'gray50')
+    # canvas.create_image(app.cx, app.cy, image = app.bgDim)
 
 
 def drawAcc(app, canvas):
