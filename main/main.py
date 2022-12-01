@@ -16,7 +16,7 @@ master_vol = 1
 cursor_size = 1
 skin = dict()
 universal_offset = 0
-background_dim = 0
+background_dim = 50
 maps = []
 
 
@@ -145,7 +145,7 @@ def appStarted(app):
     app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
     app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
     app.circle6 = HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None)
-    app.slider1 = HitObject(app.map1, 100, 100, 1900, 'Slider', (300, 1))
+    app.slider1 = HitObject(app.map1, 100, 100, 1300, 'Slider', (300, 1))
 
     # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
     # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
@@ -156,7 +156,7 @@ def appStarted(app):
     # ^ Trying to take actual map values to map it correctly 
 
     app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
-    app.map1.addObjects([app.slider1])  # Slider testing
+    # app.map1.addObjects([app.slider1])  # Slider testing
 
     app.currMap = app.map1
 
@@ -169,7 +169,7 @@ def appStarted(app):
     app.cursorX = 0
     app.cursorY = 0
     app.timePassed = 0 + universal_offset
-    app.timerDelay = 1
+    app.timerDelay = 10
     app.timeAfterDrawAcc = 0
 
     app.modMultiplier = 1
@@ -192,6 +192,8 @@ def appStarted(app):
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
     app.bgRaw = app.loadImage("phineas and ferb.jpg")
+    app.bgDim = app.loadImage("bgdim.jpg")
+    app.bgDim.putalpha(round((background_dim / 100) * 255))
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
     app.percentRaw = app.loadImage("skins/current/score-percent.png")
     app.score0Raw = app.loadImage("skins/current/score-0.png")
@@ -258,6 +260,7 @@ def appStarted(app):
     app.hit0 = ImageTk.PhotoImage(app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
     app.cursor = ImageTk.PhotoImage(app.scaleImage(app.cursorRaw, cursor_size))
     app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
+    app.bgDim = ImageTk.PhotoImage(app.scaleImage(app.bgDim, imgScale(app.bgDim, res_width)))
 
     app.circleR = (3 * app.map1.r) / 2
 
@@ -291,7 +294,6 @@ def drawSlider(app, canvas, hitObject):
     r = app.circleR
     slider = Slider(hitObject)
     canvas.create_image(slider.x, slider.y, image = app.circle)
-    print(slider.direction)
     if slider.direction == 'Left' or slider.direction == 'Right':
         canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 10) # width should scale
         canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 10)
@@ -321,6 +323,7 @@ def drawSpinner(app, canvas, hitObject):
 
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = app.bg)
+    canvas.create_image(app.cx, app.cy, image = app.bgDim)
 
 
 def drawAcc(app, canvas):
@@ -440,6 +443,7 @@ def drawHitError(app, canvas):
 def drawDrainTime(app, canvas): # Post MVP
     return 42
 
+
 def keyPressed(app, event):
     if app.waitingForFirstKeyPress:
         app.waitingForFirstKeyPress = False
@@ -479,7 +483,7 @@ def timerFired(app):
     if app.waitingForFirstKeyPress:
         return
     print(app.timePassed)
-    app.timePassed += 5
+    app.timePassed += 10 # Change to delta time, multiply everything by constant
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
         app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
@@ -495,7 +499,7 @@ def timerFired(app):
         if app.timeAfterDrawAcc > 150:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
-
+    # last timer fire call (frame time)
 
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
@@ -526,7 +530,5 @@ def redrawAll(app, canvas):
     drawGameUI(app, canvas)
     drawHitObject(app, canvas)        
     drawAcc(app, canvas)
-    print(app.map1.objects)
-
 
 runApp(width=res_width, height=res_height) 
