@@ -87,8 +87,8 @@ class Slider():
         self.y = HitObject.y
         self.approachTiming = HitObject.map.approachTiming
         self.length = HitObject.objectParams[0]
-        self.repeats = HitObject.objectParams[1]
-        self.slideTime = HitObject.objectParams[2]
+        self.slideTime = HitObject.objectParams[1]
+        self.repeats = HitObject.objectParams[2]
         self.time = HitObject.time
         self.totalSlideTime = self.slideTime * (self.repeats + 1)
         self.velocity = self.length / self.slideTime
@@ -134,7 +134,7 @@ def kthDigit(num, k):
     return (num // 10**(k-1)) % 10
 
 def almostEqual(d1, d2): # Taken from CS-112 notes (Data Types and Operators)
-    epsilon = 10**-10
+    epsilon = 10**-2
     return (abs(d2 - d1) < epsilon)
 
 def appStarted(app):
@@ -161,7 +161,7 @@ def appStarted(app):
     app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
     app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
     app.circle6 = HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None)
-    app.slider1 = HitObject(app.map1, 1000, 500, 1300, 'Slider', (300, 1, 300))
+    app.slider1 = HitObject(app.map1, 1000, 500, 1300, 'Slider', (300, 300, 1))
 
     # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
     # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
@@ -185,8 +185,9 @@ def appStarted(app):
     app.cursorX = 0
     app.cursorY = 0
     app.timePassed = 0 + universal_offset
-    app.timerDelay = 10
+    app.timerDelay = 1
     app.timeAfterDrawAcc = 0
+    app.mouseMovedDelay = 1
 
     app.modMultiplier = 1
     app.currAcc = None
@@ -358,15 +359,25 @@ def drawSlider(app, canvas, hitObject):
     canvas.create_image(slider.x, slider.y, image = app.circle)
 
     repeats = slider.repeats
-    
-    velX = ((slider.endX - slider.x) * (((elapsed - slider.approachTiming) % slider.slideTime) / slider.slideTime))
-    velY = ((slider.endY - slider.y) * (((elapsed - slider.approachTiming) % slider.slideTime) / slider.slideTime))
-    newX = slider.x + velX
-    newY = slider.y + velY
 
-    if (newX, newY) == (slider.endX, slider.endY) and repeats > 0:
+    scaling = ((((elapsed - slider.approachTiming) % slider.slideTime) / slider.slideTime))
+    delX = (slider.endX - slider.x) * scaling
+    delY = (slider.endY - slider.y) * scaling
+    
+    if scaling > 0.96 and repeats > 0: #something related to distance from each slider end
         repeats -= 1
-        velX, velY = -velX, -velY 
+        newX = slider.endX - delX
+        newY = slider.endY - delY
+        print('pizzas')
+    else:
+        newX = slider.x + delX
+        newY = slider.y + delY
+        print('wow')
+
+    print(f'scaling: {scaling}')
+    print(f'new x and new y: {newX, newY}')
+    print(f'end x and end y: {slider.endX, slider.endY}')
+    print(f'del x and del y: {delX, delY}')
 
     if elapsed >= slider.approachTiming:
         canvas.create_image(newX, newY, image = app.sliderCircle)
