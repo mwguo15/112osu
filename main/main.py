@@ -2,6 +2,7 @@ from cmu_112_graphics import *
 # from importing import *
 import math
 import pygame
+import time
 
 
 
@@ -21,8 +22,8 @@ maps = []
 
 
 # From skin.ini files, need to read later on
-SliderBackground = 'gray'
-SliderBorder = 'black'
+SliderBackground = 'black'
+SliderBorder = 'gray'
 
 # Map and object definitions taken from 
 # https://osu.ppy.sh/wiki/en/Client/File_formats/Osu_%28file_format%29
@@ -92,6 +93,7 @@ class Slider():
             and (end[1] > HitObject.map.r and end[1] < res_height - HitObject.map.r)):
                 self.endX, self.endY = end[0], end[1]
                 self.direction = end[2]
+ 
 
 class Sound(object): # Taken from Animations Part 4 on the CS-112 website
     def __init__(self, path):
@@ -121,6 +123,9 @@ def imgScale(img, base):
 def kthDigit(num, k):
     return (num // 10**(k-1)) % 10
 
+def almostEqual(d1, d2): # Taken from CS-112 notes (Data Types and Operators)
+    epsilon = 10**-10
+    return (abs(d2 - d1) < epsilon)
 
 def appStarted(app):
     # map = Map() from importing
@@ -136,7 +141,7 @@ def appStarted(app):
     pygame.mixer.init()
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
-    app.music = Sound("audio/ferb.mp3")
+    app.music = Sound("audio/meikaruza.mp3")
 
     app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3)
     app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None)
@@ -145,7 +150,7 @@ def appStarted(app):
     app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
     app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
     app.circle6 = HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None)
-    app.slider1 = HitObject(app.map1, 100, 100, 1300, 'Slider', (300, 1))
+    app.slider1 = HitObject(app.map1, 1000, 500, 1300, 'Slider', (300, 1))
 
     # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
     # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
@@ -155,8 +160,8 @@ def appStarted(app):
     # app.circle6 = HitObject(app.map1, 192 * 3, 153 * 3, 14031 // 15, 'Circle', None)
     # ^ Trying to take actual map values to map it correctly 
 
-    app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
-    # app.map1.addObjects([app.slider1])  # Slider testing
+    # app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
+    app.map1.addObjects([app.slider1])  # Slider testing
 
     app.currMap = app.map1
 
@@ -185,13 +190,12 @@ def appStarted(app):
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
     app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
     app.sliderCircleRaw = app.loadImage("skins/current/sliderb.png")
-    # app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
     app.hit300Raw = app.loadImage("skins/current/hit300.png")      
     app.hit100Raw = app.loadImage("skins/current/hit100.png")
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
-    app.bgRaw = app.loadImage("phineas and ferb.jpg")
+    app.bgRaw = app.loadImage("meikaruza.jpg")
     app.bgDim = app.loadImage("bgdim.jpg")
     app.bgDim.putalpha(round((background_dim / 100) * 255))
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
@@ -293,26 +297,51 @@ def drawCircle(app, canvas, hitObject):
 def drawSlider(app, canvas, hitObject):
     r = app.circleR
     slider = Slider(hitObject)
-    canvas.create_image(slider.x, slider.y, image = app.circle)
+    
     if slider.direction == 'Left' or slider.direction == 'Right':
-        canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 10) # width should scale
-        canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 10)
         if slider.direction == 'Left':
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180, start = 90)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180, start = 90)
+            canvas.create_rectangle(slider.endX, slider.endY - r, slider.x, slider.y + r, width = 0, fill = SliderBackground)
+            canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 5) # width should scale
+            canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 5)
+
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180, start = 90)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180, start = 90)
         else:
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180, start = 90)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180, start = 90)
+            canvas.create_rectangle(slider.x, slider.y - r, slider.endX, slider.endY + r, width = 0, fill = SliderBackground)
+            canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 5) 
+            canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 5)
+
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180, start = 90)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, fill = SliderBackground, width = 5, extent = 180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, fill = SliderBackground, width = 5, extent = -180, start = 90)
 
     if slider.direction == 'Up' or slider.direction == 'Down':
-        canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 10)
-        canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 10)
         if slider.direction == 'Up':
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180)
+            canvas.create_rectangle(slider.endX - r, slider.endY, slider.x + r, slider.y, width = 0, fill = SliderBackground)
+            canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 5)
+            canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 5)
+
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180)
+            
         else:
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', fill = SliderBorder, width = 10, extent = 180)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', fill = SliderBorder, width = 10, extent = -180)
+            canvas.create_rectangle(slider.x - r, slider.y, slider.endX + r, slider.endY, width = 0, fill = SliderBackground)
+            canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 5)
+            canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 5)
+            
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180)
+
+    
+    canvas.create_image(slider.x, slider.y, image = app.circle)
+
 
 
 
@@ -323,7 +352,6 @@ def drawSpinner(app, canvas, hitObject):
 
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = app.bg)
-    # canvas.create_rectangle(0, 0, app.width, app.height, fill = 'black', stipple = 'gray50')
     # canvas.create_image(app.cx, app.cy, image = app.bgDim)
 
 
@@ -528,8 +556,8 @@ def updateRun(app):
 
 def redrawAll(app, canvas):
     drawBackground(app, canvas)
-    drawGameUI(app, canvas)
     drawHitObject(app, canvas)        
+    drawGameUI(app, canvas)
     drawAcc(app, canvas)
 
 runApp(width=res_width, height=res_height) 
