@@ -80,18 +80,28 @@ class HitObject(Map):
         self.type = type
         self.objectParams = objectParams
 
+class Circle():
+    def __init__(self, HitObject):
+        self.x = HitObject.x
+        self.y = HitObject.y
+        self.map = HitObject.map
+        self.approachTiming = HitObject.map.approachTiming
+        self.drawTime = HitObject.drawTime
+        self.time = HitObject.time
+
 
 class Slider():
     def __init__(self, HitObject):
         self.x = HitObject.x
         self.y = HitObject.y
+        self.map = HitObject.map
         self.approachTiming = HitObject.map.approachTiming
         self.length = HitObject.objectParams[0]
         self.slideTime = HitObject.objectParams[1]
         self.repeats = HitObject.objectParams[2]
         self.time = HitObject.time
         self.totalSlideTime = self.slideTime * (self.repeats + 1)
-        self.velocity = self.length / self.slideTime
+        self.drawTime = HitObject.drawTime
 
         self.possibleEnds = {(self.x + self.length, self.y, 'Right'), (self.x, self.y + self.length, 'Down'), 
         (self.x - self.length, self.y, 'Left'), (self.x, self.y - self.length, 'Up')}
@@ -124,7 +134,6 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
 def osuPixelsToReal(pixels):
     return pixels * (res_width / 640)
 
-
 def imgScale(img, base):
     width = img.size[0]
     scale = base / width
@@ -140,14 +149,12 @@ def almostEqual(d1, d2): # Taken from CS-112 notes (Data Types and Operators)
 def appStarted(app):
     # map = Map() from importing
 
-    pygame.init()
-
-    pygame.mouse.set_visible(False)
+    app._root.config(cursor = "None") # Hides mouse cursor
 
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
 
     pygame.mixer.pre_init(44100, -16, 1, 1024) 
-    # Used to remove sound delay, especially with histounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
+    # Used to remove sound delay, especially with hitsounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
     pygame.mixer.init()
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
@@ -155,13 +162,13 @@ def appStarted(app):
 
     # app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 'Turtle Unicorn', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3, 1.8)
     app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 4, 4, 10, 6.3, 1.44)    
-    app.circle1 = HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None)
-    app.circle2 = HitObject(app.map1, app.width / 3, app.height / 3, 700, 'Circle', None)
-    app.circle3 = HitObject(app.map1, app.width / 4, app.height / 4, 900, 'Circle', None)
-    app.circle4 = HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None)
-    app.circle5 = HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None)
-    app.circle6 = HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None)
-    app.slider1 = HitObject(app.map1, 1000, 500, 1300, 'Slider', (300, 300, 1))
+    app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None))
+    app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, 'Circle', None))
+    app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, 'Circle', None))
+    app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None))
+    app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None))
+    app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None))
+    app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, 'Slider', (500, 300, 4)))
 
     # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
     # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
@@ -171,7 +178,7 @@ def appStarted(app):
     # app.circle6 = HitObject(app.map1, 192 * 3, 153 * 3, 14031 // 15, 'Circle', None)
     # ^ Trying to take actual map values to map it correctly 
 
-    # app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
+    app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
     app.map1.addObjects([app.slider1])  # Slider testing
 
     app.currMap = app.map1
@@ -190,7 +197,7 @@ def appStarted(app):
     app.mouseMovedDelay = 1
 
     app.modMultiplier = 1
-    app.currAcc = None
+    app.currAcc = 300
     app.totalAcc = 100.00
     app.objCount = 0
     app.score = 0
@@ -198,12 +205,19 @@ def appStarted(app):
     app.currCombo = 0
     app.highestCombo = 0
     app.keyHeld = False
+    app.repeatCount = 0
+
+    app.followedSlider = True
+    app.drawSliderStart = True
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
     app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
     app.sliderCircleRaw = app.loadImage("skins/current/sliderb.png")
-    app.sliderReverseArrowRaw = app.loadImage("skins/current/reversearrow@2x.png")
+    app.sliderReverseArrowLeftRaw = app.loadImage("skins/current/reversearrowleft.png")
+    app.sliderReverseArrowRightRaw = app.loadImage("skins/current/reversearrowright.png")
+    app.sliderReverseArrowUpRaw = app.loadImage("skins/current/reversearrowup.png")
+    app.sliderReverseArrowDownRaw = app.loadImage("skins/current/reversearrowdown.png")
     app.hit300Raw = app.loadImage("skins/current/hit300.png")      
     app.hit100Raw = app.loadImage("skins/current/hit100.png")
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
@@ -273,8 +287,11 @@ def appStarted(app):
     app.circle = ImageTk.PhotoImage(app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
     app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
     app.sliderCircle = ImageTk.PhotoImage(app.scaleImage(app.sliderCircleRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.sliderFollow = ImageTk.PhotoImage(app.scaleImage(app.sliderFollowRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.sliderReverseArrow = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.sliderFollow = ImageTk.PhotoImage(app.scaleImage(app.sliderFollowRaw, imgScale(app.circleRaw, 3 * 1.5 * app.map1.r)))
+    app.sliderReverseArrowLeft = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowLeftRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
+    app.sliderReverseArrowRight = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowRightRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
+    app.sliderReverseArrowUp = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowUpRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
+    app.sliderReverseArrowDown = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowDownRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
     app.hit300 = ImageTk.PhotoImage(app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
     app.hit100 = ImageTk.PhotoImage(app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
     app.hit50 = ImageTk.PhotoImage(app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
@@ -284,22 +301,22 @@ def appStarted(app):
     app.bgDim = ImageTk.PhotoImage(app.scaleImage(app.bgDim, imgScale(app.bgDim, res_width)))
 
     app.circleR = (3 * app.map1.r) / 2
+    app.sliderR = app.circleR * 1.5
 
 
 def drawHitObject(app, canvas):
     if len(app.currObjects) > 0: # Prevents out of index error for when there are no objects yet
         for hitObject in app.currObjects:
-            if hitObject.type == 'Circle':
+            if isinstance(hitObject, Circle):
                 drawCircle(app, canvas, hitObject)
                 drawApproach(app, canvas, hitObject)
-            elif hitObject.type == 'Slider':
+            elif isinstance(hitObject, Slider):
                 drawSlider(app, canvas, hitObject)
-                drawApproach(app, canvas, hitObject)
    
 
 def drawApproach(app, canvas, hitObject):
     elapsed = app.timePassed - hitObject.drawTime[0] 
-    scale = 1 + 2 * (elapsed / hitObject.map.approachTiming) 
+    scale = 1 + 2 * (elapsed / hitObject.approachTiming) 
     if scale >= 3:
         scale = 3 
     canvas.create_image(hitObject.x, hitObject.y, image = ImageTk.PhotoImage(app.scaleImage(app.approach, 1 / scale)))
@@ -311,17 +328,16 @@ def drawCircle(app, canvas, hitObject):
 
 def drawSlider(app, canvas, hitObject):
     r = app.circleR
-    slider = Slider(hitObject)
-    elapsed = app.timePassed - hitObject.drawTime[0]
+    slider = hitObject
 
     if slider.direction == 'Left' or slider.direction == 'Right':
         if slider.direction == 'Left':
             canvas.create_rectangle(slider.endX, slider.endY - r, slider.x, slider.y + r, width = 0, fill = SliderBackground)
-            canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 5) # width should scale
+            canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 5) 
             canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 5)
 
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180, start = 90)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180, start = 90)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = -180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = 180, start = 90)
             canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180, start = 90)
             canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180, start = 90)
         else:
@@ -329,8 +345,8 @@ def drawSlider(app, canvas, hitObject):
             canvas.create_line(slider.x, slider.y - r, slider.endX, slider.endY - r, fill = SliderBorder, width = 5) 
             canvas.create_line(slider.x, slider.y + r, slider.endX, slider.endY + r, fill = SliderBorder, width = 5)
 
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180, start = 90)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180, start = 90)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = 180, start = 90)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = -180, start = 90)
             canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, fill = SliderBackground, width = 5, extent = 180, start = 90)
             canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, fill = SliderBackground, width = 5, extent = -180, start = 90)
 
@@ -340,8 +356,8 @@ def drawSlider(app, canvas, hitObject):
             canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 5)
             canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 5)
 
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = -180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = 180)
             canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180)
             canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180)
             
@@ -350,45 +366,55 @@ def drawSlider(app, canvas, hitObject):
             canvas.create_line(slider.x - r, slider.y, slider.endX - r, slider.endY, fill = SliderBorder, width = 5)
             canvas.create_line(slider.x + r, slider.y, slider.endX + r, slider.endY, fill = SliderBorder, width = 5)
             
-            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, width = 0, extent = 180)
-            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, width = 0, extent = -180)
+            canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = 180)
+            canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'chord', fill = SliderBackground, outline = SliderBackground, width = 0, extent = -180)
             canvas.create_arc(slider.x - r, slider.y - r, slider.x + r, slider.y + r, style = 'arc', outline = SliderBorder, width = 5, extent = 180)
             canvas.create_arc(slider.endX - r, slider.endY - r, slider.endX + r, slider.endY + r, style = 'arc', outline = SliderBorder, width = 5, extent = -180)
 
-    
-    canvas.create_image(slider.x, slider.y, image = app.circle)
+    if app.drawSliderStart:
+        canvas.create_image(slider.x, slider.y, image = app.circle)
+        drawApproach(app, canvas, hitObject)
 
-    repeats = slider.repeats
 
-    scaling = ((((elapsed - slider.approachTiming) % slider.slideTime) / slider.slideTime))
-    delX = (slider.endX - slider.x) * scaling
-    delY = (slider.endY - slider.y) * scaling
-    
-    if scaling > 0.96 and repeats > 0: #something related to distance from each slider end
-        repeats -= 1
-        newX = slider.endX - delX
-        newY = slider.endY - delY
-        print('pizzas')
-    else:
+    elapsed = app.timePassed - slider.drawTime[0] - slider.approachTiming
+
+    if elapsed >= 0:
+        scaling = 1 - ((abs(elapsed - slider.slideTime + 1) % slider.slideTime) / slider.slideTime)
+        delX = (slider.endX - slider.x) * scaling
+        delY = (slider.endY - slider.y) * scaling
         newX = slider.x + delX
         newY = slider.y + delY
-        print('wow')
+        if app.repeatCount % 2 == 0 and app.repeatCount > 0:
+            newX = slider.endX - delX
+            newY = slider.endY - delY
 
-    print(f'scaling: {scaling}')
-    print(f'new x and new y: {newX, newY}')
-    print(f'end x and end y: {slider.endX, slider.endY}')
-    print(f'del x and del y: {delX, delY}')
-
-    if elapsed >= slider.approachTiming:
         canvas.create_image(newX, newY, image = app.sliderCircle)
-        if app.keyHeld:
+        if app.keyHeld and math.dist([newX, newY], [app.cursorX, app.cursorY]):
             canvas.create_image(newX, newY, image = app.sliderFollow)
-    
+        # else:
+        #     app.followSlider = False
 
+        if slider.repeats - app.repeatCount > 0:
+            if app.repeatCount % 2 == 0:
+                if slider.direction == 'Left':
+                    canvas.create_image(slider.endX, slider.endY, image = app.sliderReverseArrowRight)
+                elif slider.direction == 'Right':
+                    canvas.create_image(slider.endX, slider.endY, image = app.sliderReverseArrowLeft)
+                elif slider.direction == 'Up':
+                    canvas.create_image(slider.endX, slider.endY, image = app.sliderReverseArrowDown)
+                elif slider.direction == 'Down':
+                    canvas.create_image(slider.endX, slider.endY, image = app.sliderReverseArrowUp)
 
-def drawSpinner(app, canvas, hitObject):
-    return 42
-
+            if app.repeatCount % 2 == 1:
+                if slider.direction == 'Left':
+                    canvas.create_image(slider.x, slider.y, image = app.sliderReverseArrowLeft)
+                elif slider.direction == 'Right':
+                    canvas.create_image(slider.x, slider.y, image = app.sliderReverseArrowRight)
+                elif slider.direction == 'Up':
+                    canvas.create_image(slider.x, slider.y, image = app.sliderReverseArrowUp)
+                elif slider.direction == 'Down':
+                    canvas.create_image(slider.x, slider.y, image = app.sliderReverseArrowDown)
+            
 
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = app.bg)
@@ -509,7 +535,7 @@ def drawHitError(app, canvas):
     return 42
 
 
-def drawDrainTime(app, canvas): # Post MVP
+def drawDrainTime(app, canvas): 
     return 42
 
 
@@ -523,7 +549,7 @@ def keyPressed(app, event):
     if len(app.currObjects) > 0 and event.key in ('a', 's', 'A', 'S'):
         hitObject = app.currObjects[0]
         dist = math.dist([hitObject.x, hitObject.y], [app.cursorX, app.cursorY])
-        if hitObject.type == 'Circle':
+        if isinstance(hitObject, Circle):
             if dist < app.circleR:
                 hitError = abs(app.timePassed - hitObject.time)
                 if hitError < hitObject.map.hitWindow300:
@@ -539,53 +565,70 @@ def keyPressed(app, event):
                     if app.currCombo >= 20:
                         pygame.mixer.Sound.play(app.misssound)
                     app.currAcc = 0
-
-        # elif hitObject.type == 'Slider':
-        #     if dist < app.circleR:
-        #         hitError = abs(app.timePassed - hitObject.time)
-        #         if hitError > hitObject.map.hitWindow50:
-                    # app.currAcc = 0
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
                 updateRun(app)
 
+        elif isinstance(hitObject, Slider):
+            if dist < app.circleR:
+                if app.drawSliderStart:
+                    pygame.mixer.Sound.play(app.hitsound)
+                hitError = abs(app.timePassed - hitObject.time)
+                if app.followedSlider and hitError < hitObject.map.hitWindow50:
+                    app.currAcc = 300
+                else:
+                    app.currAcc = 0                  
+
     timerFired(app)
+
 
 def keyReleased(app, event):
     app.keyHeld = False
+
 
 def timerFired(app):
     if app.waitingForFirstKeyPress:
         return
 
-    # print(app.timePassed)
+    print(app.timePassed)
     app.timePassed += 10 # Change to delta time, multiply everything by constant
 
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
-        if isinstance(app.currObjects[-1], HitObject):
+        if isinstance(app.currObjects[-1], Circle):
             app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
         elif isinstance(app.currObjects[-1], Slider):
             app.currObjectsEnd.append(app.timePassed + app.currObjects[-1].totalSlideTime + app.map1.approachTiming)
 
+
     if app.timePassed in app.currObjectsEnd:
         hitObject = app.currObjects[0]
-        if isinstance(hitObject, HitObject):
+        if isinstance(hitObject, Circle):
             app.currAcc = 0
             app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
-
         elif isinstance(hitObject, Slider):
             if hitObject.repeats % 2 == 0:
                 app.currDrawAcc.append((hitObject.endX, hitObject.endY, app.currAcc))
             else:
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
-
+            if app.currAcc > 0:
+                pygame.mixer.Sound.play(app.hitsound)
         if app.currCombo >= 20 and app.currAcc == 0:
             pygame.mixer.Sound.play(app.misssound)
         updateRun(app)
 
+
+    if len(app.currObjects) > 0 and isinstance(app.currObjects[0], Slider):
+        slider = app.currObjects[0]
+        if app.timePassed - slider.drawTime[0] - slider.approachTiming >= (app.repeatCount + 1) * slider.slideTime:
+            app.repeatCount += 1
+            if app.followedSlider:
+                pygame.mixer.Sound.play(app.hitsound)
+        if app.timePassed - slider.drawTime[0] - slider.approachTiming >= 0:
+            app.drawSliderStart = False
+    
     if len(app.currDrawAcc) > 0:
         app.timeAfterDrawAcc += 10
-        if app.timeAfterDrawAcc > 150:
+        if app.timeAfterDrawAcc > 500:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
@@ -600,6 +643,8 @@ def appStopped(app):
 
 
 def updateRun(app):
+    app.repeatCount = 0
+    app.drawSliderStart = True
     if app.currCombo > app.highestCombo:
         app.highestCombo = app.currCombo
     if app.currAcc == 0:
