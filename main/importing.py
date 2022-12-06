@@ -39,7 +39,7 @@ def importingFerb():
     for section in content.split('['):
         if 'HitObjects' in section:
             for hitObject in section.split('\n'):
-                if ':' in hitObject:
+                if ',' in hitObject:
                     hitObject.join(',')
                     hitObjects.append(main.HitObject(main.app.map1, hitObject[0] * 3, hitObject[1] * 3, hitObject[2], 'Circle', None))
     return hitObjects

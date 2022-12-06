@@ -3,7 +3,7 @@ from cmu_112_graphics import *
 import math
 import pygame
 import time
-
+from timeit import default_timer as timer
 
 
 
@@ -71,13 +71,12 @@ class Map():
 
 
 class HitObject(Map):
-    def __init__(self, map, x, y, time, type, objectParams):
+    def __init__(self, map, x, y, time, objectParams):
         self.map = map
         self.x = x
         self.y = y
         self.time = time
         self.drawTime = (time - map.approachTiming, time + map.approachTiming)
-        self.type = type
         self.objectParams = objectParams
 
 class Circle():
@@ -143,7 +142,7 @@ def kthDigit(num, k):
     return (num // 10**(k-1)) % 10
 
 def almostEqual(d1, d2): # Taken from CS-112 notes (Data Types and Operators)
-    epsilon = 10**-2
+    epsilon = 10
     return (abs(d2 - d1) < epsilon)
 
 def appStarted(app):
@@ -162,13 +161,13 @@ def appStarted(app):
 
     # app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 'Turtle Unicorn', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3, 1.8)
     app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 4, 4, 10, 6.3, 1.44)    
-    app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, 'Circle', None))
-    app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, 'Circle', None))
-    app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, 'Circle', None))
-    app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, 'Circle', None))
-    app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, 'Circle', None))
-    app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, 'Circle', None))
-    app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, 'Slider', (500, 300, 4)))
+    app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, None))
+    app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, None))
+    app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, None))
+    app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, None))
+    app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, None))
+    app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, None))
+    app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, (500, 300, 4)))
 
     # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
     # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
@@ -590,8 +589,10 @@ def timerFired(app):
         return
 
     print(app.timePassed)
-    app.timePassed += 10 # Change to delta time, multiply everything by constant
 
+    start = timer()
+    
+    print(f'start {start}')
     if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
         app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
         if isinstance(app.currObjects[-1], Circle):
@@ -632,7 +633,10 @@ def timerFired(app):
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
-    # last timer fire call (frame time)
+    end = timer()
+    ms = 1000 * (end - start)
+    app.timePassed += 113 * ms
+
 
 def mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
