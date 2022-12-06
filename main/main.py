@@ -8,10 +8,11 @@ from timeit import default_timer as timer
 
 # Settings
 
-res_width = 1920
-res_height = 1080
+res_width = 1600
+res_height = 900
 playfield_width = res_width * 0.8
 playfield_height = res_height * 0.8
+playfield_start = (res_width * 0.1, res_height * 0.1)
 effects_vol = 1
 music_vol = 1
 master_vol = 1
@@ -20,6 +21,7 @@ skin = dict()
 universal_offset = 0
 background_dim = 50
 maps = []
+
 
 
 # From skin.ini files, need to read later on
@@ -75,8 +77,8 @@ class Map():
 class HitObject(Map):
     def __init__(self, map, x, y, time, objectParams):
         self.map = map
-        self.x = x
-        self.y = y
+        self.x = pixelConv(x, 'x') + playfield_start[0]
+        self.y = pixelConv(y, 'y') + playfield_start[1]
         self.time = time
         self.drawTime = (time - map.approachTiming, time + map.approachTiming)
         self.objectParams = objectParams
@@ -134,8 +136,8 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
 
 def pixelConv(pixels, dimension): # Converts osu! pixels (based on 80% of 640 * 480) to real screen pixels
     if dimension == 'x':
-        return 3 * pixels * (res_width / 512)
-    return pixels * (res_height / 384)
+        return float(pixels) * (playfield_width / 512)
+    return float(pixels) * (playfield_height / 384)
 
 def imgScale(img, base):
     width = img.size[0]
@@ -163,21 +165,21 @@ def appStarted(app):
     app.music = Sound("audio/meikaruza.mp3")
 
     # app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 'Turtle Unicorn', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3, 1.8)
-    app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 4, 10, 10, 6.3, 1.44)    
-    app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, None))
-    app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, None))
-    app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, None))
-    app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, None))
-    app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, None))
-    app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, None))
-    app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, (500, 300, 4)))
+    app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 0, 4, 10, 6.3, 1.44)    
+    # app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, None))
+    # app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, None))
+    # app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, None))
+    # app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, None))
+    # app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, None))
+    # app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, None))
+    # app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, (500, 300, 4)))
 
-    # app.circle1 = Circle(HitObject(app.map1, pixelConv(70, 'x'), pixelConv(94, 'y'), 12886, None))
-    # app.circle2 = Circle(HitObject(app.map1, pixelConv(123, 'x'), pixelConv(357, 'y'), 13214, None))
-    # app.circle3 = Circle(HitObject(app.map1, pixelConv(192, 'x'), pixelConv(153, 'y'), 13377, None))
-    # app.circle4 = Circle(HitObject(app.map1, pixelConv(31, 'x'), pixelConv(295, 'y'), 13545, None))
-    # app.circle5 = Circle(HitObject(app.map1, pixelConv(238, 'x'), pixelConv(260, 'y'), 13698, None))
-    # app.circle6 = Circle(HitObject(app.map1, pixelConv(192, 'x'), pixelConv(153, 'y'), 14039, None))
+    app.circle1 = Circle(HitObject(app.map1, 70, 94, 500, None))
+    app.circle2 = Circle(HitObject(app.map1, 123, 357, 700, None))
+    app.circle3 = Circle(HitObject(app.map1, 192, 153, 900, None))
+    app.circle4 = Circle(HitObject(app.map1, 31, 295, 1100, None))
+    app.circle5 = Circle(HitObject(app.map1, 238, 260, 1300, None))
+    app.circle6 = Circle(HitObject(app.map1, 192, 153, 1400, None))
     # ^ Trying to take actual map values to map it correctly 
 
     app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
@@ -197,6 +199,7 @@ def appStarted(app):
     app.timerDelay = 1
     app.timeAfterDrawAcc = 0
     app.mouseMovedDelay = 1
+    app.accDrawTime = 250
 
     app.modMultiplier = 1
     app.currAcc = 300
@@ -383,7 +386,6 @@ def drawSlider(app, canvas, hitObject):
 
     if elapsed >= 0:
         scaling = 1 - ((abs(elapsed - slider.slideTime) % (slider.slideTime + 1)) / slider.slideTime)
-        print(scaling)
         delX = (slider.endX - slider.x) * scaling
         delY = (slider.endY - slider.y) * scaling
         newX = slider.x + delX
@@ -634,7 +636,7 @@ def timerFired(app):
     
     if len(app.currDrawAcc) > 0:
         app.timeAfterDrawAcc += 10
-        if app.timeAfterDrawAcc > 500:
+        if app.timeAfterDrawAcc > app.accDrawTime:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
@@ -676,4 +678,29 @@ def redrawAll(app, canvas):
     drawGameUI(app, canvas)
     drawAcc(app, canvas)
 
-runApp(width=res_width, height=res_height) 
+
+
+# def readingFile(file_path):
+#     content = ''
+#     for line in open(file_path):
+#         content += line
+#     return content
+
+
+
+
+# def importing():
+#     hitObjects = []
+#     content = readingFile("maps/Peter Lambert - osu! tutorial (Sushi) [Rookie Gameplay].osu")
+#     for section in content.split('['):
+#         if 'HitObjects' in section:
+#             for hitObject in section.split('\n'):
+#                 if ',' in hitObject:
+#                     hitObject.split(',')
+#                     print(f'timing: {hitObject[2]}')
+#                     hitObjects.append(Circle(HitObject(map1, hitObject[0], hitObject[1], int(hitObject[2]), None)))
+#     return hitObjects
+
+# print(importing())
+
+runApp(width = res_width, height = res_height) 
