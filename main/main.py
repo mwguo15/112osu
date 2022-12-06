@@ -2,7 +2,6 @@ from cmu_112_graphics import *
 # from importing import *
 import math
 import pygame
-import time
 from timeit import default_timer as timer
 
 
@@ -11,6 +10,8 @@ from timeit import default_timer as timer
 
 res_width = 1920
 res_height = 1080
+playfield_width = res_width * 0.8
+playfield_height = res_height * 0.8
 effects_vol = 1
 music_vol = 1
 master_vol = 1
@@ -50,9 +51,10 @@ class Map():
         self.starRating = starRating
         self.sliderMultiplier = sliderMultiplier
         self.diffMultiplier = HP + CS + OD + AR
-        self.objects = dict()
+        self.objects = []
 
         self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
+        # self.r = 109 - (9 * CS)
         self.hitWindow300 = 79 - (OD * 6) + 0.5
         self.hitWindow100 = 139 - (OD * 8) + 0.5
         self.hitWindow50 =  199 - (OD * 10) + 0.5
@@ -67,7 +69,7 @@ class Map():
 
     def addObjects(self, objectList):
         for object in objectList:
-            self.objects[object.drawTime] = object
+            self.objects.append((object.drawTime, object)) 
 
 
 class HitObject(Map):
@@ -130,8 +132,10 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
     def stop(self):
         pygame.mixer.music.stop()
 
-def osuPixelsToReal(pixels):
-    return pixels * (res_width / 640)
+def pixelConv(pixels, dimension): # Converts osu! pixels (based on 80% of 640 * 480) to real screen pixels
+    if dimension == 'x':
+        return 3 * pixels * (res_width / 512)
+    return pixels * (res_height / 384)
 
 def imgScale(img, base):
     width = img.size[0]
@@ -141,9 +145,8 @@ def imgScale(img, base):
 def kthDigit(num, k):
     return (num // 10**(k-1)) % 10
 
-def almostEqual(d1, d2): # Taken from CS-112 notes (Data Types and Operators)
-    epsilon = 10
-    return (abs(d2 - d1) < epsilon)
+def almostEqual(d1, d2): 
+    return (abs(d2 - d1) < 20)
 
 def appStarted(app):
     # map = Map() from importing
@@ -160,7 +163,7 @@ def appStarted(app):
     app.music = Sound("audio/meikaruza.mp3")
 
     # app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 'Turtle Unicorn', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3, 1.8)
-    app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 4, 4, 10, 6.3, 1.44)    
+    app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 4, 10, 10, 6.3, 1.44)    
     app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, None))
     app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, None))
     app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, None))
@@ -169,16 +172,16 @@ def appStarted(app):
     app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, None))
     app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, (500, 300, 4)))
 
-    # app.circle1 = HitObject(app.map1, 70 * 3, 94 * 3, 12889 // 15, 'Circle', None)
-    # app.circle2 = HitObject(app.map1, 123 * 3, 357 * 3, 13211 // 15, 'Circle', None)
-    # app.circle3 = HitObject(app.map1, 192 * 3, 153, 13377 // 15, 'Circle', None)
-    # app.circle4 = HitObject(app.map1, 31 * 3, 295 * 3, 13543 // 15, 'Circle', None)
-    # app.circle5 = HitObject(app.map1, 238 * 3, 260 * 3, 13691 // 15, 'Circle', None)
-    # app.circle6 = HitObject(app.map1, 192 * 3, 153 * 3, 14031 // 15, 'Circle', None)
+    # app.circle1 = Circle(HitObject(app.map1, pixelConv(70, 'x'), pixelConv(94, 'y'), 12886, None))
+    # app.circle2 = Circle(HitObject(app.map1, pixelConv(123, 'x'), pixelConv(357, 'y'), 13214, None))
+    # app.circle3 = Circle(HitObject(app.map1, pixelConv(192, 'x'), pixelConv(153, 'y'), 13377, None))
+    # app.circle4 = Circle(HitObject(app.map1, pixelConv(31, 'x'), pixelConv(295, 'y'), 13545, None))
+    # app.circle5 = Circle(HitObject(app.map1, pixelConv(238, 'x'), pixelConv(260, 'y'), 13698, None))
+    # app.circle6 = Circle(HitObject(app.map1, pixelConv(192, 'x'), pixelConv(153, 'y'), 14039, None))
     # ^ Trying to take actual map values to map it correctly 
 
     app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
-    app.map1.addObjects([app.slider1])  # Slider testing
+    # app.map1.addObjects([app.slider1])  # Slider testing
 
     app.currMap = app.map1
 
@@ -198,7 +201,8 @@ def appStarted(app):
     app.modMultiplier = 1
     app.currAcc = 300
     app.totalAcc = 100.00
-    app.objCount = 0
+    app.accObjCount = 0
+    app.drawObjCount = 0
     app.score = 0
     app.rawScore = 0
     app.currCombo = 0
@@ -378,7 +382,8 @@ def drawSlider(app, canvas, hitObject):
     elapsed = app.timePassed - slider.drawTime[0] - slider.approachTiming
 
     if elapsed >= 0:
-        scaling = 1 - ((abs(elapsed - slider.slideTime + 1) % slider.slideTime) / slider.slideTime)
+        scaling = 1 - ((abs(elapsed - slider.slideTime) % (slider.slideTime + 1)) / slider.slideTime)
+        print(scaling)
         delX = (slider.endX - slider.x) * scaling
         delY = (slider.endY - slider.y) * scaling
         newX = slider.x + delX
@@ -590,16 +595,16 @@ def timerFired(app):
 
     print(app.timePassed)
 
-    start = timer()
-    
-    print(f'start {start}')
-    if (app.timePassed, app.timePassed + 2 * app.map1.approachTiming) in app.map1.objects:
-        app.currObjects.append(app.map1.objects[app.timePassed, app.timePassed + 2 * app.map1.approachTiming])
+    # start = timer()
+    if (app.drawObjCount < len(app.map1.objects) and 
+        (almostEqual(app.timePassed, app.map1.objects[app.drawObjCount][0][0]) and 
+        almostEqual(app.timePassed + 2 * app.map1.approachTiming, app.map1.objects[app.drawObjCount][0][1]))):
+        app.currObjects.append(app.map1.objects[app.drawObjCount][1])
         if isinstance(app.currObjects[-1], Circle):
             app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
         elif isinstance(app.currObjects[-1], Slider):
             app.currObjectsEnd.append(app.timePassed + app.currObjects[-1].totalSlideTime + app.map1.approachTiming)
-
+        app.drawObjCount += 1
 
     if app.timePassed in app.currObjectsEnd:
         hitObject = app.currObjects[0]
@@ -633,9 +638,10 @@ def timerFired(app):
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
-    end = timer()
-    ms = 1000 * (end - start)
-    app.timePassed += 113 * ms
+    # end = timer()
+    # ms = 1000 * (end - start)
+    # app.timePassed += 1110 * ms # 1110 found to be the most accurate multiplier through my testing
+    app.timePassed += 10
 
 
 def mouseMoved(app, event):
@@ -657,11 +663,11 @@ def updateRun(app):
         app.currCombo += 1
     app.currObjects.pop(0)
     app.currObjectsEnd.pop(0)
-    app.objCount += 1
+    app.accObjCount += 1
     app.rawScore += app.currAcc
     app.score += app.currAcc * (1 + (max(app.currCombo - 1, 0) * app.modMultiplier * app.map1.diffMultiplier) / 25)
     # Score scaling calculations taken from the osu! wiki: https://osu.ppy.sh/wiki/en/Gameplay/Score/ScoreV1/osu%21 
-    app.totalAcc = (app.rawScore / 3) / app.objCount
+    app.totalAcc = (app.rawScore / 3) / app.accObjCount
 
 
 def redrawAll(app, canvas):
