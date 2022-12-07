@@ -37,8 +37,8 @@ class Map():
         self.diffMultiplier = HP + CS + OD + AR
         self.objects = []
 
-        self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
-        # self.r = 109 - (9 * CS)
+        # self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
+        self.r = 109 - (9 * CS)
         self.hitWindow300 = 79 - (OD * 6) + 0.5
         self.hitWindow100 = 139 - (OD * 8) + 0.5
         self.hitWindow50 =  199 - (OD * 10) + 0.5

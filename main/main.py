@@ -11,11 +11,8 @@ from map import *
 
 # Settings
 
-res_width = 1920
-res_height = 1080
-playfield_width = res_width * 0.8
-playfield_height = res_height * 0.8
-playfield_start = (res_width * 0.1, res_height * 0.1)
+res_width = 1600
+res_height = 870
 effects_vol = 1
 music_vol = 1
 master_vol = 1
@@ -51,7 +48,14 @@ def appStarted(app):
 
     app.start = timer()
 
-    app.currMap = maps[38]
+    app.currMap = maps[2]
+
+    app.custom1 = maps[2] # Comment these three lines out if you don't want to only see a slider
+    app.currMap = app.custom1
+    app.custom1.objects = [0]
+    app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 500, 500, 2)
+    
+
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
     app.music = Sound(app.currMap.song)
@@ -67,11 +71,11 @@ def appStarted(app):
     app.timePassed = 0
     app.timerDelay = 10
     app.timeAfterDrawAcc = 0
+    app.accDrawTime = 500
     app.mouseMovedDelay = 1
-    app.accDrawTime = 250
 
     app.modMultiplier = 1
-    app.currAcc = 300
+    app.currAcc = 0
     app.totalAcc = 100.00
     app.accObjCount = 0
     app.drawObjCount = 0
@@ -175,7 +179,7 @@ def appStarted(app):
     app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
     app.bgDim = ImageTk.PhotoImage(app.scaleImage(app.bgDim, imgScale(app.bgDim, res_width)))
 
-    app.circleR = (3 * app.currMap.r) / 2
+    app.circleR = 3 * app.currMap.r / 2
     app.sliderR = app.circleR * 1.5
 
 
@@ -452,7 +456,7 @@ def keyPressed(app, event):
         elif isinstance(hitObject, Slider):
             if dist < app.circleR:
                 hitError = abs(app.timePassed - hitObject.time)
-                if app.drawSliderStart and hitError < hitObject.map.hitWindow50:
+                if app.followedSlider and hitError < hitObject.map.hitWindow50:
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 300
                 if not app.followedSlider:

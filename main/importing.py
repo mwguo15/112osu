@@ -5,7 +5,6 @@ from zipfile import ZipFile
 from map import *
 
 
-
 def readingFile(file_path):
     content = ''
     for line in open(file_path, encoding = 'utf-8'):
