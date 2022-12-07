@@ -5,7 +5,10 @@ from zipfile import ZipFile
 from map import *
 
 
-def readingFile(file_path):
+# Learned .osu/.osz format from the official osu! wiki: https://osu.ppy.sh/wiki/en/Client/File_formats/Osu_%28file_format%29  
+
+
+def readingFile(file_path): # Way of reading files found here: https://stackoverflow.com/questions/7485458/python-reading-text-file
     content = ''
     for line in open(file_path, encoding = 'utf-8'):
         content += line

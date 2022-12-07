@@ -1,6 +1,6 @@
 import pygame
 
-class Sound(object): # Taken from Animations Part 4 on the CS-112 website
+class Sound(object): # Taken from Animations Part 4 on the CS-112 website, slightly edited
     def __init__(self, path):
         self.path = path
         self.loops = 1

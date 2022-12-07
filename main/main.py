@@ -1,7 +1,6 @@
 from cmu_112_graphics import *
 from importing import *
 import math
-import pygame
 from timeit import default_timer as timer
 from importing import *
 from sound import *
@@ -107,13 +106,11 @@ def playMode_keyPressed(app, event):
     if event.key == 'Escape':
         app.waitingForKeyPress = True
         app.music.stop()
+        pygame.mixer.Sound.play(app.menuhitsound)
         app.mode = 'selectMode'
     
     app.keyHeld = True
 
-    # print(app.currMap.objects)
-    # print(app.currMap.title)
-    
     if len(app.currObjects) > 0 and event.key in ('a', 's', 'A', 'S'):
         hitObject = app.currObjects[0]
         dist = math.dist([hitObject.x, hitObject.y], [app.cursorX, app.cursorY])
@@ -138,12 +135,12 @@ def playMode_keyPressed(app, event):
 
         elif isinstance(hitObject, Slider):
             if dist < app.circleR:
-                hitError = abs(app.timePassed - hitObject.time)
-                if app.followedSlider and hitError < hitObject.map.hitWindow50:
+                if app.followedSlider and app.drawSliderStart:
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 300
                 if not app.followedSlider:
                     app.currAcc = 0         
+                  
 
     playMode_timerFired(app)
 
@@ -205,7 +202,7 @@ def playMode_timerFired(app):
             if not app.keyHeld or math.dist([newX, newY], [app.cursorX, app.cursorY]) > app.sliderR:
                 app.followedSlider = False
         
-        if elapsed >= (app.repeatCount + 1) * slider.slideTime - 15:
+        if elapsed >= (app.repeatCount + 1) * slider.slideTime - 1:
             app.repeatCount += 1
             if app.followedSlider:
                 pygame.mixer.Sound.play(app.hitsound)
@@ -220,19 +217,20 @@ def playMode_timerFired(app):
 
     end = timer()
     app.timePassed = 1000 * (end - app.start) + universal_offset
+    # print(app.currAcc)
+    # print(app.followedSlider)
 
 
 def playMode_mouseMoved(app, event):
     app.cursorX, app.cursorY = event.x, event.y
 
-def playMode_mousePressed(app, event):
-    playMode_timerFired(app)
 
 def playMode_redrawAll(app, canvas):
     drawBackground(app, canvas)
     drawHitObject(app, canvas)        
     drawGameUI(app, canvas)
     drawAcc(app, canvas)
+
 
 
 ##########################################
@@ -249,7 +247,7 @@ def appStarted(app):
     pygame.mixer.init()
 
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
-    app.mode = 'welcomeMode'
+    app.mode = 'playMode'
 
     app.start = timer()
 
@@ -257,18 +255,17 @@ def appStarted(app):
 
     app.currMap = app.maps[app.mapSelect]
 
-    # app.custom1 = app.maps[2] # Comment these four lines out if you don't want to only see a slider
-    # app.currMap = app.custom1
-    # app.custom1.objects = [0]
-    # app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 500, 500, 2)
+    app.custom1 = app.maps[2] # Comment these four lines out if you don't want to only see a slider
+    app.currMap = app.custom1
+    app.custom1.objects = [0]
+    app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 200, 1000, 1)
     
     app.welcomesound = pygame.mixer.Sound('audio/welcome.mp3') # Sound taken from here: https://www.youtube.com/watch?v=FSc48Rmpyj0 
-    app.menuhitsound = pygame.mixer.Sound('audio/menuhit.wav')
-    app.menuclicksound = pygame.mixer.Sound('audio/menuclick.wav')
-    
-    app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
-    app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
-    app.music = Sound(app.currMap.song)
+    app.menuhitsound = pygame.mixer.Sound('audio/menuhit.wav') # Sound taken from "- ryan fancy edit", found at https://github.com/Mizaruuu/osu-RyuK-s-super-cool-skins/blob/master/Skins.md
+    app.menuclicksound = pygame.mixer.Sound('audio/menuclick.wav') # Sound taken from "- ryan fancy edit", found at https://github.com/Mizaruuu/osu-RyuK-s-super-cool-skins/blob/master/Skins.md
+    app.hitsound = pygame.mixer.Sound('audio/drum-hitnormal.wav') # Sound taken from "- ryan fancy edit", found at https://github.com/Mizaruuu/osu-RyuK-s-super-cool-skins/blob/master/Skins.md
+    app.misssound = pygame.mixer.Sound('audio/combobreak.wav') # Sound taken from "- ryan fancy edit", found at https://github.com/Mizaruuu/osu-RyuK-s-super-cool-skins/blob/master/Skins.md
+    app.music = Sound(app.currMap.song) # All songs taken from the beatmaps themselves, which are found on osu.ppy.sh
     app.paused = False
 
     pygame.mixer.Sound.play(app.welcomesound)
@@ -307,6 +304,8 @@ def appStarted(app):
     app.welcomeScreenRaw = app.loadImage("backgrounds/welcome.jpg") # Image taken from the background of https://cytoid.io/levels/bloo.neko.circles
     app.welcomeScreen = ImageTk.PhotoImage(app.scaleImage(app.welcomeScreenRaw, imgScale(app.welcomeScreenRaw, res_width)))
 
+    # All of the following images, besides bgDim, taken from "- ryan fancy edit"
+
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
     app.sliderFollowRaw = app.loadImage("skins/current/sliderfollowcircle.png")
@@ -321,7 +320,7 @@ def appStarted(app):
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
     app.bgRaw = app.loadImage(app.currMap.background)
-    app.bgDim = app.loadImage('backgrounds/bgdim.jpg')
+    app.bgDim = app.loadImage('backgrounds/bgdim.jpg') # Random black square found here: https://cornellsun.com/2020/06/03/we-need-more-than-a-black-square/
     app.bgDim.putalpha(round((background_dim / 100) * 255))
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
     app.percentRaw = app.loadImage("skins/current/score-percent.png")
@@ -385,8 +384,7 @@ def appStarted(app):
     app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
     app.bgDim = ImageTk.PhotoImage(app.scaleImage(app.bgDim, imgScale(app.bgDim, res_width)))
 
-    app.circleR = app.circleScaling * app.currMap.r / 2
-    app.sliderR = app.circleR * 1.5
+    setScalings(app)
 
 
 def setScalings(app):
@@ -493,14 +491,9 @@ def drawSlider(app, canvas, hitObject):
             newX = slider.x + delX
             newY = slider.y + delY
 
-        # print(f'scaling: {scaling}')
-        # print(f'delx,y: {delX, delY}')
-
-
         canvas.create_image(newX, newY, image = app.sliderCircle)
         if app.keyHeld and math.dist([newX, newY], [app.cursorX, app.cursorY]) <= app.sliderR:
             canvas.create_image(newX, newY, image = app.sliderFollow)
-
 
         if slider.repeats - app.repeatCount > 0:
             if app.repeatCount % 2 == 0:
@@ -526,7 +519,7 @@ def drawSlider(app, canvas, hitObject):
 
 def drawBackground(app, canvas):
     canvas.create_image(app.cx, app.cy, image = app.bg)
-    # canvas.create_image(app.cx, app.cy, image = app.bgDim)
+    # canvas.create_image(app.cx, app.cy, image = app.bgDim)  # Heavily lags program for some reason
 
 
 def drawAcc(app, canvas):
