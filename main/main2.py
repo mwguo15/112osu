@@ -35,9 +35,53 @@ def kthDigit(num, k):
 def almostEqual(d1, d2): 
     return (abs(d2 - d1) < 50)
 
+
+##########################################
+# Welcome Mode
+##########################################
+
+
+def welcomeMode_mousePressed(app, event):
+    app.mode = 'selectMode'
+
+def welcomeMode_keyPressed(app, event):
+    app.mode = 'selectMode'
+
+def welcomeMode_redrawAll(app, canvas):
+    canvas.create_image(res_width / 2, res_height / 2, image = app.welcomeScreen)
+    canvas.create_text(res_width / 2, 93 * res_height / 100, text = 'Press anything to start!', font = ("Garamond", "30", "bold"), fill = 'black')
+
+
+##########################################
+# Select Mode
+##########################################
+
+
+def selectMode_keyPressed(app, event):
+    if event.key == 'Up' and app.mapSelect > 0:
+        app.mapSelect -= 1
+
+    if event.key == 'Down' and app.mapSelect < len(app.maps) - 1:
+        app.mapSelect += 1
+
+    app.currMap = app.maps[app.mapSelect]
+    app.bgRaw = app.loadImage(app.currMap.background)
+    app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
+
+
+def selectMode_redrawAll(app, canvas):
+    canvas.create_image(res_width / 2, res_height / 2, image = app.bg)
+    # canvas.create_rectangle()
+    canvas.create_text(res_width / 2, 93 * res_height / 100, text = 'Cycle through the maps with up and down', font = ("Garamond", "30", "bold"), fill = 'black')
+
+
+##########################################
+# Main App
+##########################################
+
 def appStarted(app):
 
-    maps = importingAll()
+    app.maps = importingAll()
 
     app._root.config(cursor = "None") # Hides mouse cursor
 
@@ -45,21 +89,26 @@ def appStarted(app):
     pygame.mixer.init()
 
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
-    app.playing = False
+    app.mode = 'welcomeMode'
 
     app.start = timer()
 
-    app.currMap = maps[2]
+    app.mapSelect = 0
 
-    app.custom1 = maps[2] # Comment these three lines out if you don't want to only see a slider
+    app.currMap = app.maps[app.mapSelect]
+
+    app.custom1 = app.maps[2] # Comment these three lines out if you don't want to only see a slider
     app.currMap = app.custom1
     app.custom1.objects = [0]
     app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 500, 500, 2)
     
-
+    app.welcomesound = pygame.mixer.Sound('audio/Welcome to Osu!.mp3') # Sound taken from here: https://www.youtube.com/watch?v=FSc48Rmpyj0 
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
     app.music = Sound(app.currMap.song)
+
+    pygame.mixer.Sound.play(app.welcomesound)
+
 
     app.currObjects = [] # Holds the current drawn objects 
     app.currObjectsEnd = [] # Holds the current drawn objects' ending draw time
@@ -89,6 +138,9 @@ def appStarted(app):
 
     app.followedSlider = True
     app.drawSliderStart = True
+
+    app.welcomeScreenRaw = app.loadImage("backgrounds/welcome.jpg") # Image taken from the background of https://cytoid.io/levels/bloo.neko.circles
+    app.welcomeScreen = ImageTk.PhotoImage(app.scaleImage(app.welcomeScreenRaw, imgScale(app.welcomeScreenRaw, res_width)))
 
     app.circleRaw = app.loadImage("skins/current/hitcircleoverlay.png")
     app.approachRaw = app.loadImage("skins/current/approachcircle.png")
@@ -325,13 +377,6 @@ def drawGameUI(app, canvas):
     drawCursor(app, canvas)
     drawCombo(app, canvas)
     drawTotalAcc(app, canvas)
-    drawTimeRemaining(app, canvas)
-    drawKeyPresses(app, canvas)
-    drawScore(app, canvas)
-    drawHitError(app, canvas)
-    drawHP(app, canvas)
-    drawDrainTime(app, canvas)
-    drawLocalScores(app, canvas)
 
 
 def drawCursor(app, canvas):
@@ -399,30 +444,6 @@ def drawTotalAcc(app, canvas):
         canvas.create_image(94 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[tens])
     if str(app.totalAcc) == "100.0":
         canvas.create_image(93 * app.width / 100, 2.5 * app.height / 50, image = app.accNums[1])
-
-
-def drawTimeRemaining(app, canvas):
-    return 42
-
-
-def drawKeyPresses(app, canvas):
-    return 42
-
-
-def drawHP(app, canvas):
-    return 42
-
-
-def drawLocalScores(app, canvas):
-    return 42
-
-
-def drawHitError(app, canvas):
-    return 42
-
-
-def drawDrainTime(app, canvas): 
-    return 42
 
 
 def keyPressed(app, event):
