@@ -18,3 +18,4 @@ class Sound(object): # Taken from Animations Part 4 on the CS-112 website
     # Stops the current sound from playing
     def stop(self):
         pygame.mixer.music.stop()
+
