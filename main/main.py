@@ -10,8 +10,8 @@ from map import *
 
 # Settings
 
-res_width = 1920
-res_height = 1080
+res_width = 1600
+res_height = 850
 effects_vol = 1
 music_vol = 1
 master_vol = 1
@@ -40,9 +40,6 @@ def almostEqual(d1, d2):
 # Welcome Mode
 ##########################################
 
-
-def welcomeMode_mousePressed(app, event):
-    app.mode = 'selectMode'
 
 def welcomeMode_keyPressed(app, event):
     app.mode = 'selectMode'
