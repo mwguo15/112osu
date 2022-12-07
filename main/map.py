@@ -1,12 +1,13 @@
-res_width = 1600
-res_height = 900
+res_width = 1920
+res_height = 1080
 playfield_width = res_width * 0.8
 playfield_height = res_height * 0.8
 playfield_start = (res_width * 0.1, res_height * 0.1)
 
 maps = []
 
-def pixelConv(pixels, dimension): # Converts osu! pixels (based on 80% of 640 * 480) to real screen pixels
+def pixelConv(pixels, dimension): # Converts osu! pixels (based on 80% of 640 * 480) to real screen pixels, found from here: 
+    # https://www.reddit.com/r/osugame/comments/vvua1l/osupixels_to_normal_coordinates/
     if dimension == 'x':
         return pixels * (playfield_width / 512)
     return pixels * (playfield_height / 384)
@@ -38,7 +39,7 @@ class Map():
         self.objects = []
 
         # self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
-        self.r = 109 - (9 * CS)
+        self.r = 109 - (9 * CS) # Found here: https://www.reddit.com/r/osugame/comments/5gd3dm/whats_the_cspixel_formula/
         self.hitWindow300 = 79 - (OD * 6) + 0.5
         self.hitWindow100 = 139 - (OD * 8) + 0.5
         self.hitWindow50 =  199 - (OD * 10) + 0.5
@@ -46,7 +47,7 @@ class Map():
             self.approachTiming = 1200 - ((AR - 5) * 150)
         else:
             self.approachTiming = 1800 - (AR * 120)
-        # All calculations for hit windows, approach rates, and circle radius found here 
+        # Most calculations for hit windows, approach rates, and circle radius found here: 
         # https://www.reddit.com/r/osugame/comments/6phntt/difficulty_settings_table_with_all_values/
 
         self.localScores = []

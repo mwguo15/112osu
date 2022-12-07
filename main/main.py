@@ -247,18 +247,20 @@ def appStarted(app):
     pygame.mixer.init()
 
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
-    app.mode = 'playMode'
 
     app.start = timer()
+
+    app.mode = 'welcomeMode'
 
     app.mapSelect = 0
 
     app.currMap = app.maps[app.mapSelect]
 
-    app.custom1 = app.maps[2] # Comment these four lines out if you don't want to only see a slider
-    app.currMap = app.custom1
-    app.custom1.objects = [0]
-    app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 200, 1000, 1)
+    # app.mode = 'playMode' # Uncomments these five lines out if you want to only see the slider
+    # app.custom1 = app.maps[2] 
+    # app.currMap = app.custom1
+    # app.custom1.objects = [0]
+    # app.custom1.objects[0] = (12244.0, 13004.5), Slider(HitObject(app.custom1, 416, 250, 12889), 200, 1000, 1)
     
     app.welcomesound = pygame.mixer.Sound('audio/welcome.mp3') # Sound taken from here: https://www.youtube.com/watch?v=FSc48Rmpyj0 
     app.menuhitsound = pygame.mixer.Sound('audio/menuhit.wav') # Sound taken from "- ryan fancy edit", found at https://github.com/Mizaruuu/osu-RyuK-s-super-cool-skins/blob/master/Skins.md
