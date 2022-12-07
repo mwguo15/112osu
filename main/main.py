@@ -1,15 +1,18 @@
 from cmu_112_graphics import *
-# from importing import *
+from importing import *
 import math
 import pygame
 from timeit import default_timer as timer
+from importing import *
+from sound import *
+from map import *
 
 
 
 # Settings
 
-res_width = 1600
-res_height = 900
+res_width = 1920
+res_height = 1080
 playfield_width = res_width * 0.8
 playfield_height = res_height * 0.8
 playfield_start = (res_width * 0.1, res_height * 0.1)
@@ -17,127 +20,12 @@ effects_vol = 1
 music_vol = 1
 master_vol = 1
 cursor_size = 1
-skin = dict()
 universal_offset = 0
 background_dim = 50
-maps = []
 
-
-
-# From skin.ini files, need to read later on
 SliderBackground = 'black'
 SliderBorder = 'gray'
 
-# Map and object definitions taken from 
-# https://osu.ppy.sh/wiki/en/Client/File_formats/Osu_%28file_format%29
-
-
-class Map():
-    def __init__(self, title, artist, creator, version, mapID, setID, background, HP, CS, OD, AR, starRating, sliderMultiplier):
-        # HP = HP drain rate, CS = circle size, OD = overall difficulty, AR = approach rate
-        # Definitions of these difficulty setting terms can be found at 
-        # https://osu.ppy.sh/wiki/en/Client/Beatmap_editor/Song_Setup#difficulty
-
-        self.title = title
-        self.artist = artist
-        self.creator = creator
-        self.version = version
-        self.mapID = mapID
-        self.setID = setID
-        self.background = background
-        
-        self.HP = HP
-        self.CS = CS
-        self.OD = OD
-        self.AR = AR
-        self.starRating = starRating
-        self.sliderMultiplier = sliderMultiplier
-        self.diffMultiplier = HP + CS + OD + AR
-        self.objects = []
-
-        self.r = 32 * (1 - ((0.7 * (CS - 5)) / 5)) 
-        # self.r = 109 - (9 * CS)
-        self.hitWindow300 = 79 - (OD * 6) + 0.5
-        self.hitWindow100 = 139 - (OD * 8) + 0.5
-        self.hitWindow50 =  199 - (OD * 10) + 0.5
-        if AR > 5:
-            self.approachTiming = 1200 - ((AR - 5) * 150)
-        else:
-            self.approachTiming = 1800 - (AR * 120)
-        # All calculations for hit windows, approach rates, and circle radius found here 
-        # https://www.reddit.com/r/osugame/comments/6phntt/difficulty_settings_table_with_all_values/
-
-        self.localScores = []
-
-    def addObjects(self, objectList):
-        for object in objectList:
-            self.objects.append((object.drawTime, object)) 
-
-
-class HitObject(Map):
-    def __init__(self, map, x, y, time, objectParams):
-        self.map = map
-        self.x = pixelConv(x, 'x') + playfield_start[0]
-        self.y = pixelConv(y, 'y') + playfield_start[1]
-        self.time = time
-        self.drawTime = (time - map.approachTiming, time + map.approachTiming)
-        self.objectParams = objectParams
-
-class Circle():
-    def __init__(self, HitObject):
-        self.x = HitObject.x
-        self.y = HitObject.y
-        self.map = HitObject.map
-        self.approachTiming = HitObject.map.approachTiming
-        self.drawTime = HitObject.drawTime
-        self.time = HitObject.time
-
-
-class Slider():
-    def __init__(self, HitObject):
-        self.x = HitObject.x
-        self.y = HitObject.y
-        self.map = HitObject.map
-        self.approachTiming = HitObject.map.approachTiming
-        self.length = HitObject.objectParams[0]
-        self.slideTime = HitObject.objectParams[1]
-        self.repeats = HitObject.objectParams[2]
-        self.time = HitObject.time
-        self.totalSlideTime = self.slideTime * (self.repeats + 1)
-        self.drawTime = HitObject.drawTime
-
-        self.possibleEnds = {(self.x + self.length, self.y, 'Right'), (self.x, self.y + self.length, 'Down'), 
-        (self.x - self.length, self.y, 'Left'), (self.x, self.y - self.length, 'Up')}
-        for end in self.possibleEnds:
-            if ((end[0] > HitObject.map.r and end[0] < res_width - HitObject.map.r) 
-            and (end[1] > HitObject.map.r and end[1] < res_height - HitObject.map.r)):
-                self.endX, self.endY = end[0], end[1]
-                self.direction = end[2]
- 
-
-class Sound(object): # Taken from Animations Part 4 on the CS-112 website
-    def __init__(self, path):
-        self.path = path
-        self.loops = 1
-        pygame.mixer.music.load(path)
-
-    # Loops = number of times to loop the sound.       
-
-    # If loops = 1 or 1, play it once.
-    # If loops > 1, play it loops + 1 times.
-    # If loops = -1, loop forever.
-    def start(self, loops=1):
-        self.loops = loops
-        pygame.mixer.music.play(loops=loops)
-
-    # Stops the current sound from playing
-    def stop(self):
-        pygame.mixer.music.stop()
-
-def pixelConv(pixels, dimension): # Converts osu! pixels (based on 80% of 640 * 480) to real screen pixels
-    if dimension == 'x':
-        return float(pixels) * (playfield_width / 512)
-    return float(pixels) * (playfield_height / 384)
 
 def imgScale(img, base):
     width = img.size[0]
@@ -148,44 +36,25 @@ def kthDigit(num, k):
     return (num // 10**(k-1)) % 10
 
 def almostEqual(d1, d2): 
-    return (abs(d2 - d1) < 20)
+    return (abs(d2 - d1) < 50)
 
 def appStarted(app):
-    # map = Map() from importing
+
+    maps = importingAll()
 
     app._root.config(cursor = "None") # Hides mouse cursor
 
+    pygame.mixer.pre_init(44100, -16, 1, 1024) # Used to remove sound delay, especially with hitsounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
+    pygame.mixer.init()
+
     app.waitingForFirstKeyPress = True # Taken from 15-112 Animations Part 3
 
-    pygame.mixer.pre_init(44100, -16, 1, 1024) 
-    # Used to remove sound delay, especially with hitsounds. Taken from https://stackoverflow.com/questions/18273722/pygame-sound-delay 
-    pygame.mixer.init()
+    app.start = timer()
+
+    app.currMap = maps[38]
     app.hitsound = pygame.mixer.Sound("audio/drum-hitnormal.wav")
     app.misssound = pygame.mixer.Sound("audio/combobreak.wav")
-    app.music = Sound("audio/meikaruza.mp3")
-
-    # app.map1 = Map('Today is Gonna be a Great Day (TV Size)', 'Bowling For Soup', 'Smoke', 'Turtle Unicorn', 2518847, 1209835, 'phineas and ferb.jpg', 10, 4, 4, 10, 6.3, 1.8)
-    app.map1 = Map('MAKE A LOSER (inst)', 'Nanahoshi Kangengakudan', 'Keqing', "Yudragen's Expert", 3359370, 1504828, 'meikaruza.jpg', 5.4, 0, 4, 10, 6.3, 1.44)    
-    # app.circle1 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 500, None))
-    # app.circle2 = Circle(HitObject(app.map1, app.width / 3, app.height / 3, 700, None))
-    # app.circle3 = Circle(HitObject(app.map1, app.width / 4, app.height / 4, 900, None))
-    # app.circle4 = Circle(HitObject(app.map1, app.width / 5, app.height / 5, 1100, None))
-    # app.circle5 = Circle(HitObject(app.map1, app.width / 6, app.height / 6, 1300, None))
-    # app.circle6 = Circle(HitObject(app.map1, app.width / 2, app.height / 2, 1400, None))
-    # app.slider1 = Slider(HitObject(app.map1, 1000, 500, 2000, (500, 300, 4)))
-
-    app.circle1 = Circle(HitObject(app.map1, 70, 94, 500, None))
-    app.circle2 = Circle(HitObject(app.map1, 123, 357, 700, None))
-    app.circle3 = Circle(HitObject(app.map1, 192, 153, 900, None))
-    app.circle4 = Circle(HitObject(app.map1, 31, 295, 1100, None))
-    app.circle5 = Circle(HitObject(app.map1, 238, 260, 1300, None))
-    app.circle6 = Circle(HitObject(app.map1, 192, 153, 1400, None))
-    # ^ Trying to take actual map values to map it correctly 
-
-    app.map1.addObjects([app.circle1, app.circle2, app.circle3, app.circle4, app.circle5, app.circle6])
-    # app.map1.addObjects([app.slider1])  # Slider testing
-
-    app.currMap = app.map1
+    app.music = Sound(app.currMap.song)
 
     app.currObjects = [] # Holds the current drawn objects 
     app.currObjectsEnd = [] # Holds the current drawn objects' ending draw time
@@ -195,8 +64,8 @@ def appStarted(app):
     app.cy = app.height / 2
     app.cursorX = 0
     app.cursorY = 0
-    app.timePassed = 0 + universal_offset
-    app.timerDelay = 1
+    app.timePassed = 0
+    app.timerDelay = 10
     app.timeAfterDrawAcc = 0
     app.mouseMovedDelay = 1
     app.accDrawTime = 250
@@ -229,8 +98,8 @@ def appStarted(app):
     app.hit50Raw = app.loadImage("skins/current/hit50.png")
     app.hit0Raw = app.loadImage("skins/current/hit0.png")
     app.cursorRaw = app.loadImage("skins/current/cursor.png")
-    app.bgRaw = app.loadImage(app.map1.background)
-    app.bgDim = app.loadImage("bgdim.jpg")
+    app.bgRaw = app.loadImage(app.currMap.background)
+    app.bgDim = app.loadImage('backgrounds/bgdim.jpg')
     app.bgDim.putalpha(round((background_dim / 100) * 255))
     app.comboXRaw = app.loadImage("skins/current/combo-x@2x.png")
     app.percentRaw = app.loadImage("skins/current/score-percent.png")
@@ -290,23 +159,23 @@ def appStarted(app):
     app.scoreNums = {0: app.score0, 1: app.score1, 2: app.score2, 3: app.score3, 4: app.score4, 
     5: app.score5, 6: app.score6, 7: app.score7, 8: app.score8, 9: app.score9}
 
-    app.circle = ImageTk.PhotoImage(app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.map1.r))
-    app.sliderCircle = ImageTk.PhotoImage(app.scaleImage(app.sliderCircleRaw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.sliderFollow = ImageTk.PhotoImage(app.scaleImage(app.sliderFollowRaw, imgScale(app.circleRaw, 3 * 1.5 * app.map1.r)))
-    app.sliderReverseArrowLeft = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowLeftRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
-    app.sliderReverseArrowRight = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowRightRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
-    app.sliderReverseArrowUp = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowUpRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
-    app.sliderReverseArrowDown = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowDownRaw, imgScale(app.circleRaw, 1.5 * app.map1.r)))
-    app.hit300 = ImageTk.PhotoImage(app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.hit100 = ImageTk.PhotoImage(app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.hit50 = ImageTk.PhotoImage(app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
-    app.hit0 = ImageTk.PhotoImage(app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.map1.r)))
+    app.circle = ImageTk.PhotoImage(app.scaleImage(app.circleRaw, imgScale(app.circleRaw, 3 * app.currMap.r)))
+    app.approach = app.scaleImage(app.approachRaw, 3 * imgScale(app.circleRaw, 3 * app.currMap.r))
+    app.sliderCircle = ImageTk.PhotoImage(app.scaleImage(app.sliderCircleRaw, imgScale(app.circleRaw, 3 * app.currMap.r)))
+    app.sliderFollow = ImageTk.PhotoImage(app.scaleImage(app.sliderFollowRaw, imgScale(app.circleRaw, 3 * 1.5 * app.currMap.r)))
+    app.sliderReverseArrowLeft = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowLeftRaw, imgScale(app.circleRaw, 1.5 * app.currMap.r)))
+    app.sliderReverseArrowRight = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowRightRaw, imgScale(app.circleRaw, 1.5 * app.currMap.r)))
+    app.sliderReverseArrowUp = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowUpRaw, imgScale(app.circleRaw, 1.5 * app.currMap.r)))
+    app.sliderReverseArrowDown = ImageTk.PhotoImage(app.scaleImage(app.sliderReverseArrowDownRaw, imgScale(app.circleRaw, 1.5 * app.currMap.r)))
+    app.hit300 = ImageTk.PhotoImage(app.scaleImage(app.hit300Raw, imgScale(app.circleRaw, 3 * app.currMap.r)))
+    app.hit100 = ImageTk.PhotoImage(app.scaleImage(app.hit100Raw, imgScale(app.circleRaw, 3 * app.currMap.r)))
+    app.hit50 = ImageTk.PhotoImage(app.scaleImage(app.hit50Raw, imgScale(app.circleRaw, 3 * app.currMap.r)))
+    app.hit0 = ImageTk.PhotoImage(app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, 3 * app.currMap.r)))
     app.cursor = ImageTk.PhotoImage(app.scaleImage(app.cursorRaw, cursor_size))
     app.bg = ImageTk.PhotoImage(app.scaleImage(app.bgRaw, imgScale(app.bgRaw, res_width)))
     app.bgDim = ImageTk.PhotoImage(app.scaleImage(app.bgDim, imgScale(app.bgDim, res_width)))
 
-    app.circleR = (3 * app.map1.r) / 2
+    app.circleR = (3 * app.currMap.r) / 2
     app.sliderR = app.circleR * 1.5
 
 
@@ -385,20 +254,26 @@ def drawSlider(app, canvas, hitObject):
     elapsed = app.timePassed - slider.drawTime[0] - slider.approachTiming
 
     if elapsed >= 0:
+
         scaling = 1 - ((abs(elapsed - slider.slideTime) % (slider.slideTime + 1)) / slider.slideTime)
         delX = (slider.endX - slider.x) * scaling
         delY = (slider.endY - slider.y) * scaling
-        newX = slider.x + delX
-        newY = slider.y + delY
+
         if app.repeatCount % 2 == 0 and app.repeatCount > 0:
             newX = slider.endX - delX
             newY = slider.endY - delY
+        else:
+            newX = slider.x + delX
+            newY = slider.y + delY
+
+        # print(f'scaling: {scaling}')
+        # print(f'delx,y: {delX, delY}')
+
 
         canvas.create_image(newX, newY, image = app.sliderCircle)
-        if app.keyHeld and math.dist([newX, newY], [app.cursorX, app.cursorY]):
+        if app.keyHeld and math.dist([newX, newY], [app.cursorX, app.cursorY]) <= app.sliderR:
             canvas.create_image(newX, newY, image = app.sliderFollow)
-        # else:
-        #     app.followSlider = False
+
 
         if slider.repeats - app.repeatCount > 0:
             if app.repeatCount % 2 == 0:
@@ -568,7 +443,7 @@ def keyPressed(app, event):
                     pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 50
                 else:
-                    if app.currCombo >= 20:
+                    if app.currCombo >= 10:
                         pygame.mixer.Sound.play(app.misssound)
                     app.currAcc = 0
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
@@ -576,13 +451,12 @@ def keyPressed(app, event):
 
         elif isinstance(hitObject, Slider):
             if dist < app.circleR:
-                if app.drawSliderStart:
-                    pygame.mixer.Sound.play(app.hitsound)
                 hitError = abs(app.timePassed - hitObject.time)
-                if app.followedSlider and hitError < hitObject.map.hitWindow50:
+                if app.drawSliderStart and hitError < hitObject.map.hitWindow50:
+                    pygame.mixer.Sound.play(app.hitsound)
                     app.currAcc = 300
-                else:
-                    app.currAcc = 0                  
+                if not app.followedSlider:
+                    app.currAcc = 0         
 
     timerFired(app)
 
@@ -593,22 +467,20 @@ def keyReleased(app, event):
 
 def timerFired(app):
     if app.waitingForFirstKeyPress:
-        return
+        app.start = timer()
 
-    print(app.timePassed)
 
-    # start = timer()
-    if (app.drawObjCount < len(app.map1.objects) and 
-        (almostEqual(app.timePassed, app.map1.objects[app.drawObjCount][0][0]) and 
-        almostEqual(app.timePassed + 2 * app.map1.approachTiming, app.map1.objects[app.drawObjCount][0][1]))):
-        app.currObjects.append(app.map1.objects[app.drawObjCount][1])
+    if (app.drawObjCount < len(app.currMap.objects) and 
+        (almostEqual(app.timePassed, app.currMap.objects[app.drawObjCount][0][0]) and 
+        almostEqual(app.timePassed + app.currMap.approachTiming + app.currMap.hitWindow50, app.currMap.objects[app.drawObjCount][0][1]))):
+        app.currObjects.append(app.currMap.objects[app.drawObjCount][1])
         if isinstance(app.currObjects[-1], Circle):
-            app.currObjectsEnd.append(app.timePassed + 2 * app.map1.approachTiming)
+            app.currObjectsEnd.append(app.timePassed + app.currMap.approachTiming + app.currMap.hitWindow50)
         elif isinstance(app.currObjects[-1], Slider):
-            app.currObjectsEnd.append(app.timePassed + app.currObjects[-1].totalSlideTime + app.map1.approachTiming)
+            app.currObjectsEnd.append(app.timePassed + app.currObjects[-1].totalSlideTime + app.currMap.approachTiming)
         app.drawObjCount += 1
 
-    if app.timePassed in app.currObjectsEnd:
+    if len(app.currObjectsEnd) > 0 and almostEqual(app.timePassed, app.currObjectsEnd[0]):
         hitObject = app.currObjects[0]
         if isinstance(hitObject, Circle):
             app.currAcc = 0
@@ -620,30 +492,47 @@ def timerFired(app):
                 app.currDrawAcc.append((hitObject.x, hitObject.y, app.currAcc))
             if app.currAcc > 0:
                 pygame.mixer.Sound.play(app.hitsound)
-        if app.currCombo >= 20 and app.currAcc == 0:
+        if app.currCombo >= 10 and app.currAcc == 0:
             pygame.mixer.Sound.play(app.misssound)
         updateRun(app)
 
 
     if len(app.currObjects) > 0 and isinstance(app.currObjects[0], Slider):
         slider = app.currObjects[0]
-        if app.timePassed - slider.drawTime[0] - slider.approachTiming >= (app.repeatCount + 1) * slider.slideTime:
+
+        elapsed = app.timePassed - slider.drawTime[0] - slider.approachTiming
+
+        if elapsed >= 0:
+
+            scaling = 1 - ((abs(elapsed - slider.slideTime) % (slider.slideTime + 1)) / slider.slideTime)
+            delX = (slider.endX - slider.x) * scaling
+            delY = (slider.endY - slider.y) * scaling
+
+            if app.repeatCount % 2 == 0 and app.repeatCount > 0:
+                newX = slider.endX - delX
+                newY = slider.endY - delY
+            else:
+                newX = slider.x + delX
+                newY = slider.y + delY
+
+            if not app.keyHeld or math.dist([newX, newY], [app.cursorX, app.cursorY]) > app.sliderR:
+                app.followedSlider = False
+        
+        if elapsed >= (app.repeatCount + 1) * slider.slideTime - 15:
             app.repeatCount += 1
             if app.followedSlider:
                 pygame.mixer.Sound.play(app.hitsound)
-        if app.timePassed - slider.drawTime[0] - slider.approachTiming >= 0:
+        if elapsed >= 0:
             app.drawSliderStart = False
     
     if len(app.currDrawAcc) > 0:
-        app.timeAfterDrawAcc += 10
+        app.timeAfterDrawAcc += 150
         if app.timeAfterDrawAcc > app.accDrawTime:
             app.currDrawAcc.pop(0)
             app.timeAfterDrawAcc = 0
 
-    # end = timer()
-    # ms = 1000 * (end - start)
-    # app.timePassed += 1110 * ms # 1110 found to be the most accurate multiplier through my testing
-    app.timePassed += 10
+    end = timer()
+    app.timePassed = 1000 * (end - app.start) + universal_offset
 
 
 def mouseMoved(app, event):
@@ -667,7 +556,7 @@ def updateRun(app):
     app.currObjectsEnd.pop(0)
     app.accObjCount += 1
     app.rawScore += app.currAcc
-    app.score += app.currAcc * (1 + (max(app.currCombo - 1, 0) * app.modMultiplier * app.map1.diffMultiplier) / 25)
+    app.score += app.currAcc * (1 + (max(app.currCombo - 1, 0) * app.modMultiplier * app.currMap.diffMultiplier) / 25)
     # Score scaling calculations taken from the osu! wiki: https://osu.ppy.sh/wiki/en/Gameplay/Score/ScoreV1/osu%21 
     app.totalAcc = (app.rawScore / 3) / app.accObjCount
 
@@ -677,30 +566,5 @@ def redrawAll(app, canvas):
     drawHitObject(app, canvas)        
     drawGameUI(app, canvas)
     drawAcc(app, canvas)
-
-
-
-# def readingFile(file_path):
-#     content = ''
-#     for line in open(file_path):
-#         content += line
-#     return content
-
-
-
-
-# def importing():
-#     hitObjects = []
-#     content = readingFile("maps/Peter Lambert - osu! tutorial (Sushi) [Rookie Gameplay].osu")
-#     for section in content.split('['):
-#         if 'HitObjects' in section:
-#             for hitObject in section.split('\n'):
-#                 if ',' in hitObject:
-#                     hitObject.split(',')
-#                     print(f'timing: {hitObject[2]}')
-#                     hitObjects.append(Circle(HitObject(map1, hitObject[0], hitObject[1], int(hitObject[2]), None)))
-#     return hitObjects
-
-# print(importing())
 
 runApp(width = res_width, height = res_height) 
