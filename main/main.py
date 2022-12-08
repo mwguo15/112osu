@@ -10,14 +10,12 @@ from map import *
 
 # Settings
 
-res_width = 1600
-res_height = 850
 effects_vol = 1
 music_vol = 1
 master_vol = 1
 cursor_size = 1
 universal_offset = 0
-background_dim = 50
+background_dim = 0
 
 SliderBackground = 'black'
 SliderBorder = 'gray'
@@ -103,6 +101,7 @@ def playMode_keyPressed(app, event):
     if event.key == 'Escape':
         app.waitingForKeyPress = True
         app.music.stop()
+        resetMap(app)
         pygame.mixer.Sound.play(app.menuhitsound)
         app.mode = 'selectMode'
     
@@ -156,7 +155,7 @@ def playMode_timerFired(app):
         almostEqual(app.timePassed + app.currMap.approachTiming + app.currMap.hitWindow50, app.currMap.objects[app.drawObjCount][0][1]))):
         app.currObjects.append(app.currMap.objects[app.drawObjCount][1])
         if isinstance(app.currObjects[-1], Circle):
-            app.currObjectsEnd.append(app.timePassed + app.currMap.approachTiming + app.currMap.hitWindow50)
+            app.currObjectsEnd.append(app.timePassed + app.currMap.approachTiming + 2 * app.currMap.hitWindow50)
         elif isinstance(app.currObjects[-1], Slider):
             app.currObjectsEnd.append(app.timePassed + app.currObjects[-1].totalSlideTime + app.currMap.approachTiming)
         app.drawObjCount += 1
@@ -214,8 +213,6 @@ def playMode_timerFired(app):
 
     end = timer()
     app.timePassed = 1000 * (end - app.start) + universal_offset
-    # print(app.currAcc)
-    # print(app.followedSlider)
 
 
 def playMode_mouseMoved(app, event):
@@ -278,7 +275,7 @@ def appStarted(app):
     app.cursorX = 0
     app.cursorY = 0
     app.timePassed = 0
-    app.timerDelay = 10
+    app.timerDelay = 20
     app.timeAfterDrawAcc = 0
     app.accDrawTime = 500
     app.mouseMovedDelay = 5
@@ -295,7 +292,7 @@ def appStarted(app):
     app.keyHeld = False
     app.repeatCount = 0
 
-    app.circleScaling = 2.5
+    app.circleScaling = 2
 
     app.followedSlider = True
     app.drawSliderStart = True
@@ -401,6 +398,24 @@ def setScalings(app):
     app.hit0 = ImageTk.PhotoImage(app.scaleImage(app.hit0Raw, imgScale(app.circleRaw, app.circleScaling * app.currMap.r)))
     app.circleR = app.circleScaling * app.currMap.r / 2
     app.sliderR = app.circleR * 1.5
+
+
+def resetMap(app):
+    app.currObjects = [] 
+    app.currObjectsEnd = [] 
+    app.currDrawAcc = []
+    app.accObjCount = 0
+    app.drawObjCount = 0
+    app.totalAcc = 100.0
+    app.currAcc = 300
+    app.score = 0
+    app.rawScore = 0
+    app.currCombo = 0
+    app.highestCombo = 0
+    app.keyHeld = False
+    app.repeatCount = 0
+    app.waitingForFirstKeyPress = True 
+    app.start = timer()
 
 
 def drawHitObject(app, canvas):

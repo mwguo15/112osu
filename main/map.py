@@ -1,5 +1,5 @@
-res_width = 1920
-res_height = 1080
+res_width = 1600
+res_height = 850
 playfield_width = res_width * 0.8
 playfield_height = res_height * 0.8
 playfield_start = (res_width * 0.1, res_height * 0.1)
